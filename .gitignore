@@ -15,7 +15,7 @@ state.json
 config.toml
 
 # Claude Code local settings (auto-generated in worktrees)
-**/.claude/settings.local.json
+**/.chloe-pied/settings.local.json
 
 # Event files
 .chloe

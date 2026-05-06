@@ -5,9 +5,9 @@ use std::path::Path;
 use uuid::Uuid;
 
 #[derive(Parser)]
-#[command(name = "chloe-pied")]]
+#[command(name = "chloe-pied")]
 #[command(version)]
-#[command(about = "Chloe-pied - Task management with Pi integration")]]
+#[command(about = "Chloe-pied - Task management with Pi integration")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,

@@ -34,7 +34,7 @@ If you use Pi as your coding agent and want task management + worktree isolation
 | **Hook system** | Unix socket + `chloe notify` for lifecycle events | Uses `chloe-pied notify` (same socket pattern, compatible) |
 | **Config dir** | `.chloe/` | `.chloe-pied/` |
 | **Branch prefix** | `chloe/` | `pied/` |
-| **Agent settings** | Generates `.claude/settings.local.json` per worktree | No per-worktree settings file (Pi uses its own config) |
+| **Agent settings** | Generates `.claude/settings.local.json` per worktree | Generates `.chloe-pied/settings.local.json` per worktree (minimal hook config) |
 
 ## Features (inherited from Chloe)
 

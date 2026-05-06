@@ -15,13 +15,16 @@ pub struct ProviderSpec {
 #[derive(Debug, Clone, Copy)]
 pub enum PromptStyle {
     Direct,
+    #[allow(dead_code)]
     Flag(&'static str),
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum OneShotPromptStyle {
+    #[allow(dead_code)]
     Direct,
     Flag(&'static str),
+    #[allow(dead_code)]
     Subcommand(&'static str),
 }
 

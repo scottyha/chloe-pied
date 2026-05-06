@@ -124,8 +124,8 @@ fn detect_error(output: &str) -> Option<String> {
 }
 
 fn detect_provider_notification(output: &str) -> Option<String> {
-    if let Ok(claude_pattern) = Regex::new(r"(?i)claude(?:\s+code)?:\s*(.{0,100})")
-        && let Some(captures) = claude_pattern.captures(output)
+    if let Ok(pi_pattern) = Regex::new(r"(?i)pi(?:\s+agent)?:\s*(.{0,100})")
+        && let Some(captures) = pi_pattern.captures(output)
         && let Some(notification_match) = captures.get(1)
     {
         let notification_text = notification_match.as_str().trim();

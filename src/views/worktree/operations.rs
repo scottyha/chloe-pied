@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 const MAX_SLUG_LENGTH: usize = 50;
 
-/// Generate `.claude-pied/settings.local.json` in the worktree with lifecycle hook configuration
+/// Generate `.chloe-pied/settings.local.json` in the worktree with lifecycle hook configuration
 fn generate_agent_settings(worktree_path: &Path, task_id: &Uuid) -> Result<()> {
     // Pi doesn't use a settings file like Claude Code's .claude/settings.local.json.
     // Lifecycle events are detected via PTY process monitoring in chloe-pied.
@@ -28,15 +28,15 @@ fn generate_agent_settings(worktree_path: &Path, task_id: &Uuid) -> Result<()> {
         }
     });
 
-    let config_dir = worktree_path.join(".claude-pied");
-    fs::create_dir_all(&config_dir).context("Failed to create .claude-pied directory")?;
+    let config_dir = worktree_path.join(".chloe-pied");
+    fs::create_dir_all(&config_dir).context("Failed to create .chloe-pied directory")?;
 
     let settings_path = config_dir.join("settings.local.json");
     let settings_content =
         serde_json::to_string_pretty(&settings).context("Failed to serialize agent settings")?;
 
     fs::write(&settings_path, settings_content)
-        .context("Failed to write .claude-pied/settings.local.json")?;
+        .context("Failed to write .chloe-pied/settings.local.json")?;
 
     Ok(())
 }
