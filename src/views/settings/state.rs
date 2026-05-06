@@ -1,10 +1,11 @@
 use crate::types::{
     AgentProvider, DetectedProvider, PermissionConfig, PermissionPreset, ProviderRegistry,
+    ReviewMode,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-const SECTION_COUNT: usize = 4;
+const SECTION_COUNT: usize = 5;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SettingsSection {
@@ -12,6 +13,7 @@ pub enum SettingsSection {
     EditorAndIde,
     Agent,
     Persistence,
+    Review,
 }
 
 impl SettingsSection {
@@ -20,6 +22,7 @@ impl SettingsSection {
         Self::EditorAndIde,
         Self::Agent,
         Self::Persistence,
+        Self::Review,
     ];
 
     #[must_use]
@@ -29,6 +32,7 @@ impl SettingsSection {
             1 => Some(Self::EditorAndIde),
             2 => Some(Self::Agent),
             3 => Some(Self::Persistence),
+            4 => Some(Self::Review),
             _ => None,
         }
     }
@@ -40,6 +44,7 @@ impl SettingsSection {
             Self::EditorAndIde => "<>",
             Self::Agent => "@",
             Self::Persistence => "[]",
+            Self::Review => "⟳",
         }
     }
 
@@ -50,6 +55,7 @@ impl SettingsSection {
             Self::EditorAndIde => "Editor & IDE",
             Self::Agent => "Agent",
             Self::Persistence => "Persistence",
+            Self::Review => "Review",
         }
     }
 
@@ -60,6 +66,7 @@ impl SettingsSection {
             Self::EditorAndIde => "Set up your preferred code editor",
             Self::Agent => "Configure AI agent providers",
             Self::Persistence => "Auto-save and data settings",
+            Self::Review => "Configure how code changes are reviewed",
         }
     }
 
@@ -77,6 +84,7 @@ impl SettingsSection {
                 SettingItem::ProviderPermissions,
             ],
             Self::Persistence => &[SettingItem::AutoSaveInterval],
+            Self::Review => &[SettingItem::ReviewMode],
         }
     }
 
@@ -109,6 +117,8 @@ pub struct Settings {
     pub provider_registry: ProviderRegistry,
     #[serde(default)]
     pub permission_configs: HashMap<AgentProvider, PermissionConfig>,
+    #[serde(default)]
+    pub review_mode: ReviewMode,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -323,6 +333,7 @@ impl Default for Settings {
             skip_provider_selection: false,
             provider_registry: ProviderRegistry::new(),
             permission_configs,
+            review_mode: ReviewMode::default(),
         }
     }
 }
@@ -349,6 +360,9 @@ pub enum SettingsMode {
     SelectingVcs {
         selected_index: usize,
     },
+    SelectingReviewMode {
+        selected_index: usize,
+    },
     ConfiguringPermissions {
         selected_preset_index: usize,
     },
@@ -363,6 +377,7 @@ pub enum SettingItem {
     VcsCommand,
     DefaultProvider,
     ProviderPermissions,
+    ReviewMode,
 }
 
 impl SettingItem {
@@ -376,6 +391,7 @@ impl SettingItem {
             Self::VcsCommand => "Version Control",
             Self::DefaultProvider => "Default Agent",
             Self::ProviderPermissions => "Agent Permissions",
+            Self::ReviewMode => "Review Mode",
         }
     }
 }
@@ -513,6 +529,12 @@ impl SettingsState {
                     selected_index: current_index,
                 };
             }
+            SettingItem::ReviewMode => {
+                let current_index = self.get_current_review_mode_index();
+                self.mode = SettingsMode::SelectingReviewMode {
+                    selected_index: current_index,
+                };
+            }
             SettingItem::DefaultProvider => {
                 if self.detected_providers.len() <= 1 {
                     if let Some(detected) = self.detected_providers.first() {
@@ -566,6 +588,13 @@ impl SettingsState {
         }
     }
 
+    const fn get_current_review_mode_index(&self) -> usize {
+        match self.settings.review_mode {
+            ReviewMode::Human => 0,
+            ReviewMode::Agentic => 1,
+        }
+    }
+
     pub fn select_ide(&mut self, index: usize) {
         self.settings.ide_command = match index {
             0 => IdeCommand::Cursor,
@@ -594,6 +623,15 @@ impl SettingsState {
         self.mode = SettingsMode::Normal;
     }
 
+    pub fn select_review_mode(&mut self, index: usize) {
+        self.settings.review_mode = match index {
+            0 => ReviewMode::Human,
+            1 => ReviewMode::Agentic,
+            _ => return,
+        };
+        self.mode = SettingsMode::Normal;
+    }
+
     pub fn confirm_edit(&mut self) {
         match self.mode {
             SettingsMode::Normal
@@ -602,6 +640,9 @@ impl SettingsState {
             | SettingsMode::SelectingTerminal { .. }
             | SettingsMode::SelectingVcs { .. }
             | SettingsMode::ConfiguringPermissions { .. } => {}
+            SettingsMode::SelectingReviewMode { .. } => {
+                self.mode = SettingsMode::Normal;
+            }
             SettingsMode::EditingShell { .. } => {
                 if !self.edit_buffer.is_empty() {
                     self.settings.default_shell = self.edit_buffer.clone();
@@ -633,6 +674,7 @@ impl SettingsState {
             | SettingsMode::SelectingIde { .. }
             | SettingsMode::SelectingTerminal { .. }
             | SettingsMode::SelectingVcs { .. }
+            | SettingsMode::SelectingReviewMode { .. }
             | SettingsMode::ConfiguringPermissions { .. } => {}
             SettingsMode::EditingShell { .. } => {
                 self.edit_buffer.push(character);

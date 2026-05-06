@@ -2,7 +2,7 @@ use super::state::{
     IdeCommand, SettingItem, SettingsFocus, SettingsMode, SettingsSection, SettingsState,
     TerminalCommand, VcsCommand,
 };
-use crate::types::PermissionPreset;
+use crate::types::{PermissionPreset, ReviewMode};
 use crate::views::StatusBarContent;
 use crate::views::tasks::dialogs::{
     ProviderSelectionViewState, centered_rect, render_popup_background, render_provider_selection,
@@ -249,7 +249,8 @@ const fn get_item_type_indicator(item: SettingItem) -> &'static str {
         SettingItem::IdeCommand
         | SettingItem::TerminalCommand
         | SettingItem::VcsCommand
-        | SettingItem::DefaultProvider => "[select]",
+        | SettingItem::DefaultProvider
+        | SettingItem::ReviewMode => "[select]",
         SettingItem::ProviderPermissions => "[configure]",
     }
 }
@@ -264,6 +265,7 @@ fn get_setting_value_text(item: SettingItem, state: &SettingsState) -> String {
         SettingItem::TerminalCommand => state.settings.terminal_command.display_name().to_string(),
         SettingItem::VcsCommand => state.settings.vcs_command.display_name().to_string(),
         SettingItem::DefaultProvider => state.settings.default_provider.display_name().to_string(),
+        SettingItem::ReviewMode => state.settings.review_mode.display_name().to_string(),
         SettingItem::ProviderPermissions => {
             let config = state
                 .settings
@@ -295,6 +297,9 @@ fn render_dialogs(frame: &mut Frame, area: Rect, state: &SettingsState) {
         }
         SettingsMode::SelectingVcs { selected_index } => {
             render_vcs_selection_dialog(frame, area, state, selected_index);
+        }
+        SettingsMode::SelectingReviewMode { selected_index } => {
+            render_review_mode_selection_dialog(frame, area, state, selected_index);
         }
         SettingsMode::EditingShell { .. } => {
             render_text_input_dialog(frame, area, "Edit Default Shell", &state.edit_buffer);
@@ -474,6 +479,46 @@ const fn is_current_vcs(command: &VcsCommand, index: usize) -> bool {
         (command, index),
         (VcsCommand::Git, 0) | (VcsCommand::Jujutsu, 1)
     )
+}
+
+fn render_review_mode_selection_dialog(
+    frame: &mut Frame,
+    area: Rect,
+    state: &SettingsState,
+    selected_index: usize,
+) {
+    let popup_area = centered_rect(
+        SELECTION_POPUP_WIDTH_PERCENT,
+        SELECTION_POPUP_HEIGHT_PERCENT,
+        area,
+    );
+    render_popup_background(frame, popup_area);
+
+    let block = Block::default()
+        .title(" Select Review Mode ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan))
+        .padding(Padding::uniform(1));
+
+    let inner_area = block.inner(popup_area);
+    frame.render_widget(block, popup_area);
+
+    let items: Vec<ListItem> = ReviewMode::ALL
+        .iter()
+        .enumerate()
+        .map(|(index, review_mode)| {
+            render_selection_option(
+                review_mode.display_name(),
+                review_mode.description(),
+                index,
+                selected_index,
+                state.settings.review_mode == *review_mode,
+            )
+        })
+        .collect();
+
+    let list = List::new(items);
+    frame.render_widget(list, inner_area);
 }
 
 fn render_selection_option(
@@ -669,6 +714,7 @@ pub fn get_status_bar_content(state: &SettingsState, width: u16) -> StatusBarCon
         | SettingsMode::SelectingIde { .. }
         | SettingsMode::SelectingTerminal { .. }
         | SettingsMode::SelectingVcs { .. }
+        | SettingsMode::SelectingReviewMode { .. }
         | SettingsMode::ConfiguringPermissions { .. } => "SELECT",
     };
 
@@ -679,6 +725,7 @@ pub fn get_status_bar_content(state: &SettingsState, width: u16) -> StatusBarCon
             | SettingsMode::SelectingIde { .. }
             | SettingsMode::SelectingTerminal { .. }
             | SettingsMode::SelectingVcs { .. }
+            | SettingsMode::SelectingReviewMode { .. }
             | SettingsMode::ConfiguringPermissions { .. } => {
                 "jk:navigate  Enter:select  Esc:cancel"
             }
@@ -696,6 +743,7 @@ pub fn get_status_bar_content(state: &SettingsState, width: u16) -> StatusBarCon
             | SettingsMode::SelectingIde { .. }
             | SettingsMode::SelectingTerminal { .. }
             | SettingsMode::SelectingVcs { .. }
+            | SettingsMode::SelectingReviewMode { .. }
             | SettingsMode::ConfiguringPermissions { .. } => {
                 "jk/arrows: navigate  Enter: select  Esc: cancel"
             }
