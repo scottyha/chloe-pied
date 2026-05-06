@@ -1,5 +1,5 @@
 use super::helpers::{
-    COLUMN_COLORS, COLUMN_COLORS_SELECTED, get_claude_state_indicator_for_card, truncate_string,
+    COLUMN_COLORS, COLUMN_COLORS_SELECTED, get_agent_state_indicator_for_card, truncate_string,
     wrap_text,
 };
 use crate::app::App;
@@ -139,9 +139,9 @@ pub fn render_columns(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn render_task_card(frame: &mut Frame, app: &App, task: &Task, area: Rect, is_selected: bool) {
-    let claude_indicator = task
+    let agent_indicator = task
         .instance_id
-        .and_then(|instance_id| app.get_instance_claude_state(instance_id));
+        .and_then(|instance_id| app.get_instance_agent_state(instance_id));
 
     let border_color = if task.is_classifying {
         Color::Yellow
@@ -162,7 +162,7 @@ fn render_task_card(frame: &mut Frame, app: &App, task: &Task, area: Rect, is_se
     let title_max_width = area.width.saturating_sub(4) as usize;
     let title_line = build_task_card_title(
         task,
-        claude_indicator,
+        agent_indicator,
         title_max_width,
         app.tasks.spinner_frame,
     );
@@ -183,7 +183,7 @@ fn render_task_card(frame: &mut Frame, app: &App, task: &Task, area: Rect, is_se
 
 fn build_task_card_title(
     task: &Task,
-    claude_indicator: Option<crate::views::instances::ClaudeState>,
+    agent_indicator: Option<crate::views::instances::AgentState>,
     title_max_width: usize,
     spinner_frame: usize,
 ) -> Line<'_> {
@@ -193,8 +193,8 @@ fn build_task_card_title(
         task.kind.color()
     };
 
-    let has_indicator = claude_indicator.is_some()
-        && claude_indicator != Some(crate::views::instances::ClaudeState::Idle);
+    let has_indicator = agent_indicator.is_some()
+        && agent_indicator != Some(crate::views::instances::AgentState::Idle);
     let indicator_width = if has_indicator { 2 } else { 0 };
 
     let available_title_width = title_max_width.saturating_sub(8 + indicator_width);
@@ -214,10 +214,10 @@ fn build_task_card_title(
     ));
     title_spans.push(Span::raw(" "));
 
-    if let Some(state) = claude_indicator
-        && state != crate::views::instances::ClaudeState::Idle
+    if let Some(state) = agent_indicator
+        && state != crate::views::instances::AgentState::Idle
     {
-        let (indicator, color) = get_claude_state_indicator_for_card(state);
+        let (indicator, color) = get_agent_state_indicator_for_card(state);
         title_spans.push(Span::styled(
             format!("{indicator} "),
             Style::default().fg(color).add_modifier(Modifier::BOLD),

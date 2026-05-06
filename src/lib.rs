@@ -1,4 +1,6 @@
-//! Chloe library crate
+//! Chloe-pied - Pi-native task management TUI
+//!
+//! A fork of Chloe (https://github.com/KevinEdry/chloe) adapted for Pi coding agent.
 //!
 //! # Safety Policy
 //!

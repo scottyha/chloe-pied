@@ -1,7 +1,7 @@
 use crate::helpers::text;
-use crate::views::instances::ClaudeState;
+use crate::views::instances::AgentState;
 use crate::views::tasks::TaskType;
-use crate::widgets::{claude_indicator, spinner};
+use crate::widgets::{agent_indicator, spinner};
 use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span},
@@ -15,7 +15,7 @@ pub struct TaskItem {
     task_type: TaskType,
     is_selected: bool,
     is_classifying: bool,
-    claude_state: Option<ClaudeState>,
+    agent_state: Option<AgentState>,
     title_max_length: usize,
     selection_color: Color,
     badge_color_override: Option<Color>,
@@ -30,7 +30,7 @@ impl TaskItem {
             task_type,
             is_selected: false,
             is_classifying: false,
-            claude_state: None,
+            agent_state: None,
             title_max_length: DEFAULT_TITLE_MAX_LENGTH,
             selection_color: Color::Cyan,
             badge_color_override: None,
@@ -51,8 +51,8 @@ impl TaskItem {
     }
 
     #[must_use]
-    pub const fn claude_state(mut self, state: Option<ClaudeState>) -> Self {
-        self.claude_state = state;
+    pub const fn agent_state(mut self, state: Option<AgentState>) -> Self {
+        self.agent_state = state;
         self
     }
 
@@ -124,9 +124,9 @@ impl TaskItem {
         ));
 
         if !self.is_classifying
-            && let Some(state) = self.claude_state
+            && let Some(state) = self.agent_state
         {
-            let (indicator, color) = claude_indicator::dot_visible(state);
+            let (indicator, color) = agent_indicator::dot_visible(state);
             if !indicator.is_empty() {
                 spans.push(Span::raw(" "));
                 spans.push(Span::styled(

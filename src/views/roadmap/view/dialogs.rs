@@ -147,7 +147,7 @@ pub fn render_loading_dialog(f: &mut Frame, state: &RoadmapState, area: Rect) {
         ]),
         Line::from(""),
         Line::from(vec![Span::styled(
-            "Claude is discovering features and creating",
+            "Pi is discovering features and creating",
             Style::default().fg(Color::DarkGray),
         )]),
         Line::from(vec![Span::styled(

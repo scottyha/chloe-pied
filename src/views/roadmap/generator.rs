@@ -1,6 +1,6 @@
 use super::{RoadmapItem, RoadmapPriority, RoadmapStatus};
 use crate::events::AppEvent;
-use crate::types::Result;
+use crate::types::{AgentProvider, Result};
 use serde::{Deserialize, Serialize};
 use std::thread;
 use tokio::sync::mpsc;
@@ -29,7 +29,7 @@ pub fn spawn_roadmap_generation(
     event_sender: mpsc::UnboundedSender<AppEvent>,
 ) {
     thread::spawn(move || {
-        let result = generate_with_claude(&project_path);
+        let result = generate_with_provider(&project_path, AgentProvider::Pi);
         let event_result = result.map_err(|error| error.to_string());
         let _ = event_sender.send(AppEvent::RoadmapGenerationCompleted {
             result: event_result,
@@ -37,20 +37,30 @@ pub fn spawn_roadmap_generation(
     });
 }
 
-fn generate_with_claude(project_path: &str) -> Result<GeneratedRoadmap> {
+fn generate_with_provider(project_path: &str, provider: AgentProvider) -> Result<GeneratedRoadmap> {
     let prompt = build_roadmap_prompt(project_path);
 
-    let output = std::process::Command::new("claude")
-        .arg(&prompt)
-        .output()
-        .map_err(|error| {
-            crate::types::AppError::Config(format!("Failed to run claude CLI: {error}"))
-        })?;
+    let spec = crate::providers::get_spec(provider);
+    let command = spec.build_oneshot_command(&prompt);
+
+    let mut process_command = std::process::Command::new(&command.program);
+    process_command.args(&command.arguments);
+    for (key, value) in &command.environment {
+        process_command.env(key, value);
+    }
+
+    let output = process_command.output().map_err(|error| {
+        crate::types::AppError::Config(format!(
+            "Failed to run {} CLI: {error}",
+            provider.display_name()
+        ))
+    })?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(crate::types::AppError::Config(format!(
-            "claude CLI failed: {stderr}"
+            "{} CLI failed: {stderr}",
+            provider.display_name()
         )));
     }
 
@@ -148,7 +158,7 @@ fn extract_json(text: &str) -> Result<String> {
     }
 
     Err(crate::types::AppError::Config(
-        "No JSON found in claude output".to_string(),
+        "No JSON found in agent output".to_string(),
     ))
 }
 

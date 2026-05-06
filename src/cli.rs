@@ -5,9 +5,9 @@ use std::path::Path;
 use uuid::Uuid;
 
 #[derive(Parser)]
-#[command(name = "chloe")]
+#[command(name = "chloe-pied")]]
 #[command(version)]
-#[command(about = "Auto Claude CLI - Task management with Claude Code integration")]
+#[command(about = "Chloe-pied - Task management with Pi integration")]]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
@@ -15,10 +15,10 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Initialize Chloe in the current directory
+    /// Initialize Chloe-pied in the current directory
     Init,
 
-    /// Handle Claude Code hook events (internal use)
+    /// Handle lifecycle hook events (internal use)
     Notify {
         /// Event type: start, end, permission
         event_type: String,
@@ -57,14 +57,14 @@ pub fn handle_notify_command(event_type: String, worktree_id: Uuid) -> Result<()
 }
 
 pub fn handle_init_command() -> Result<(), String> {
-    let chloe_directory = Path::new(".chloe");
+    let chloe_directory = Path::new(".chloe-pied");
     let gitignore_path = Path::new(".gitignore");
-    let gitignore_entry = ".chloe/";
+    let gitignore_entry = ".chloe-pied/";
 
     fs::create_dir_all(chloe_directory)
-        .map_err(|error| format!("Failed to create .chloe directory: {error}"))?;
+        .map_err(|error| format!("Failed to create .chloe-pied directory: {error}"))?;
 
-    println!("Created .chloe/ directory");
+    println!("Created .chloe-pied/ directory");
 
     let should_add_to_gitignore = if gitignore_path.exists() {
         let contents = fs::read_to_string(gitignore_path)
@@ -98,12 +98,12 @@ pub fn handle_init_command() -> Result<(), String> {
         file.write_all(entry_to_write.as_bytes())
             .map_err(|error| format!("Failed to write to .gitignore: {error}"))?;
 
-        println!("Added .chloe/ to .gitignore");
+            println!("Added .chloe-pied/ to .gitignore");
     } else {
-        println!(".chloe/ already in .gitignore");
+            println!(".chloe-pied/ already in .gitignore");
     }
 
-    println!("Chloe initialized successfully!");
+    println!("Chloe-pied initialized successfully!");
 
     Ok(())
 }

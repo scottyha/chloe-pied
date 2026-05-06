@@ -1,5 +1,5 @@
 use crate::views::instances::InstancePane;
-use crate::widgets::claude_indicator;
+use crate::widgets::agent_indicator;
 use crate::widgets::terminal::{AlacrittyScreen, Cursor, PseudoTerminal};
 use ratatui::{
     Frame,
@@ -43,7 +43,7 @@ pub fn render(
         .border_style(Style::default().fg(border_color));
 
     if let Some(pane) = &pane {
-        let (indicator, color) = claude_indicator::label(pane.claude_state);
+        let (indicator, color) = agent_indicator::label(pane.agent_state);
         block = block.title_bottom(
             Line::from(vec![Span::styled(
                 format!(" {indicator} "),

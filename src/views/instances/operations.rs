@@ -119,7 +119,7 @@ impl InstanceState {
 
             match pty::PtySession::spawn_with_options(spawn_options) {
                 Ok(session) => {
-                    pane.claude_state = super::ClaudeState::Running;
+                    pane.agent_state = super::AgentState::Running;
                     pane.pty_session = Some(session);
                 }
                 Err(error) => {

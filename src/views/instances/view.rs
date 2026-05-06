@@ -2,7 +2,7 @@ use super::layout;
 use super::state::{InstancePane, InstanceState};
 use crate::views::StatusBarContent;
 use crate::widgets::activity_summary::ActivitySummaryWidget;
-use crate::widgets::claude_indicator;
+use crate::widgets::agent_indicator;
 use crate::widgets::terminal::{AlacrittyScreen, Cursor, PseudoTerminal};
 use ratatui::{
     Frame,
@@ -129,7 +129,7 @@ fn render_pane(
             Modifier::empty()
         });
 
-    let (state_indicator, indicator_color) = claude_indicator::dot(pane.claude_state);
+    let (state_indicator, indicator_color) = agent_indicator::dot(pane.agent_state);
 
     let pane_name = pane
         .name

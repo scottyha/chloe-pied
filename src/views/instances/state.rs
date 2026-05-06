@@ -146,7 +146,7 @@ impl InstanceState {
             return;
         };
 
-        pane.claude_state = ClaudeState::Done;
+        pane.agent_state = AgentState::Done;
     }
 
     pub fn selected_pane_mut(&mut self) -> Option<&mut InstancePane> {
@@ -199,7 +199,7 @@ impl Default for InstanceState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub enum ClaudeState {
+pub enum AgentState {
     #[default]
     Idle,
     Running,
@@ -221,7 +221,7 @@ pub struct InstancePane {
     #[serde(skip, default)]
     pub pty_spawn_error: Option<String>,
     #[serde(default)]
-    pub claude_state: ClaudeState,
+    pub agent_state: AgentState,
     #[serde(skip, default)]
     pub scroll_offset: usize,
     pub last_viewed_at: Option<DateTime<Utc>>,
@@ -251,7 +251,7 @@ impl InstancePane {
             columns,
             pty_session: None,
             pty_spawn_error: None,
-            claude_state: ClaudeState::Idle,
+            agent_state: AgentState::Idle,
             scroll_offset: 0,
             last_viewed_at: Some(Utc::now()),
             activity_events: VecDeque::new(),

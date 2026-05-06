@@ -44,7 +44,7 @@ impl HookEvent {
 
 #[must_use]
 pub fn get_socket_path() -> PathBuf {
-    std::env::temp_dir().join("chloe.sock")
+    std::env::temp_dir().join("chloe-pied.sock")
 }
 
 pub struct EventListener {

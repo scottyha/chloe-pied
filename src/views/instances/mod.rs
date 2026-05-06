@@ -8,4 +8,4 @@ pub mod state;
 pub mod view;
 
 pub use action::TerminalAction;
-pub use state::{ClaudeState, InstanceMode, InstancePane, InstanceState};
+pub use state::{AgentState, InstanceMode, InstancePane, InstanceState};

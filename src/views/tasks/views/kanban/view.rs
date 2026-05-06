@@ -45,7 +45,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
             frame.render_widget(
                 ConfirmDialog::new(
                     "Move Back",
-                    "Move back to previous column? This will terminate the Claude Code instance and clean up resources. (y/n)",
+                    "Move back to previous column? This will terminate the agent instance and clean up resources. (y/n)",
                 )
                 .style(DialogStyle::Danger),
                 area,

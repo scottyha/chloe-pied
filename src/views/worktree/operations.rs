@@ -8,78 +8,35 @@ use uuid::Uuid;
 
 const MAX_SLUG_LENGTH: usize = 50;
 
-/// Generate `.claude/settings.local.json` in the worktree to pre-configure permissions
-fn generate_claude_settings(worktree_path: &Path, task_id: &Uuid) -> Result<()> {
+/// Generate `.claude-pied/settings.local.json` in the worktree with lifecycle hook configuration
+fn generate_agent_settings(worktree_path: &Path, task_id: &Uuid) -> Result<()> {
+    // Pi doesn't use a settings file like Claude Code's .claude/settings.local.json.
+    // Lifecycle events are detected via PTY process monitoring in chloe-pied.
+    // We generate a minimal hook config so that `chloe-pied notify` commands
+    // can still be used if a pi extension forwards lifecycle events.
     let settings = serde_json::json!({
-        "permissions": {
-            "allow": [
-                "Read",
-                "Edit",
-                "Write",
-                "MultiEdit",
-                "Glob",
-                "Grep",
-                "Bash",
-                "Skill"
-            ]
-        },
-        "sandbox": {
-            "enabled": true,
-            "autoAllowBashIfSandboxed": true
-        },
-        "includeCoAuthoredBy": false,
-        "gitAttribution": false,
         "hooks": {
-            "SessionStart": [{
-                "hooks": [{
-                    "type": "command",
-                    "command": format!("chloe notify start --worktree-id {}", task_id)
-                }]
+            "session_start": [{
+                "command": format!("chloe-pied notify start --worktree-id {}", task_id)
             }],
-            "SessionEnd": [{
-                "hooks": [{
-                    "type": "command",
-                    "command": format!("chloe notify end --worktree-id {}", task_id)
-                }]
+            "session_end": [{
+                "command": format!("chloe-pied notify end --worktree-id {}", task_id)
             }],
-            "PermissionRequest": [{
-                "matcher": "*",
-                "hooks": [{
-                    "type": "command",
-                    "command": format!("chloe notify permission --worktree-id {}", task_id)
-                }]
-            }],
-            "PostToolUse": [{
-                "matcher": "*",
-                "hooks": [{
-                    "type": "command",
-                    "command": format!("chloe notify start --worktree-id {}", task_id)
-                }]
-            }],
-            "Stop": [{
-                "hooks": [{
-                    "type": "command",
-                    "command": format!("chloe notify end --worktree-id {}", task_id)
-                }]
-            }],
-            "UserPromptSubmit": [{
-                "hooks": [{
-                    "type": "command",
-                    "command": format!("chloe notify start --worktree-id {}", task_id)
-                }]
+            "permission_request": [{
+                "command": format!("chloe-pied notify permission --worktree-id {}", task_id)
             }]
         }
     });
 
-    let claude_dir = worktree_path.join(".claude");
-    fs::create_dir_all(&claude_dir).context("Failed to create .claude directory")?;
+    let config_dir = worktree_path.join(".claude-pied");
+    fs::create_dir_all(&config_dir).context("Failed to create .claude-pied directory")?;
 
-    let settings_path = claude_dir.join("settings.local.json");
+    let settings_path = config_dir.join("settings.local.json");
     let settings_content =
-        serde_json::to_string_pretty(&settings).context("Failed to serialize Claude settings")?;
+        serde_json::to_string_pretty(&settings).context("Failed to serialize agent settings")?;
 
     fs::write(&settings_path, settings_content)
-        .context("Failed to write .claude/settings.local.json")?;
+        .context("Failed to write .claude-pied/settings.local.json")?;
 
     Ok(())
 }
@@ -450,7 +407,7 @@ fn list_jj_workspaces(repository_path: &Path) -> Result<Vec<Worktree>> {
 }
 
 /// Generate a valid git branch name from a task title
-/// Example: "Implement Worktree Support" -> "chloe/implement-worktree-support"
+/// Example: "Implement Worktree Support" -> "pied/implement-worktree-support"
 #[must_use]
 pub fn generate_branch_name(task_title: &str) -> String {
     let slug = task_title
@@ -477,7 +434,7 @@ pub fn generate_branch_name(task_title: &str) -> String {
         &slug
     };
 
-    format!("chloe/{truncated_slug}")
+    format!("pied/{truncated_slug}")
 }
 
 /// Create a new worktree/workspace for a task
@@ -519,7 +476,7 @@ fn create_git_worktree(
     };
 
     let worktree_dir_name = final_branch_name.replace('/', "-");
-    let worktree_path = repository_path.join(format!(".chloe/worktrees/{worktree_dir_name}"));
+    let worktree_path = repository_path.join(format!(".chloe-pied/worktrees/{worktree_dir_name}"));
 
     let output = std::process::Command::new("git")
         .arg("worktree")
@@ -538,7 +495,7 @@ fn create_git_worktree(
 
     let worktree_info = WorktreeInfo::new(final_branch_name, worktree_path.clone());
 
-    generate_claude_settings(&worktree_path, task_id)?;
+    generate_agent_settings(&worktree_path, task_id)?;
 
     Ok(worktree_info)
 }
@@ -549,11 +506,11 @@ fn create_jj_workspace(
     task_id: &Uuid,
 ) -> Result<WorktreeInfo> {
     let workspace_name = generate_workspace_name(task_title, task_id);
-    let workspace_path = repository_path.join(format!(".chloe/workspaces/{workspace_name}"));
+    let workspace_path = repository_path.join(format!(".chloe-pied/workspaces/{workspace_name}"));
 
-    let workspaces_parent = repository_path.join(".chloe/workspaces");
+    let workspaces_parent = repository_path.join(".chloe-pied/workspaces");
     fs::create_dir_all(&workspaces_parent)
-        .context("Failed to create .chloe/workspaces directory")?;
+        .context("Failed to create .chloe-pied/workspaces directory")?;
 
     let output = std::process::Command::new("jj")
         .arg("workspace")
@@ -572,7 +529,7 @@ fn create_jj_workspace(
 
     let worktree_info = WorktreeInfo::new(workspace_name, workspace_path.clone());
 
-    generate_claude_settings(&workspace_path, task_id)?;
+    generate_agent_settings(&workspace_path, task_id)?;
 
     Ok(worktree_info)
 }
@@ -603,7 +560,7 @@ fn generate_workspace_name(task_title: &str, task_id: &Uuid) -> String {
     };
 
     let short_id = &task_id.to_string()[..8];
-    format!("chloe-{truncated_slug}-{short_id}")
+    format!("pied-{truncated_slug}-{short_id}")
 }
 
 /// Merge a worktree branch into main (legacy function, calls `merge_worktree` with "main")
@@ -800,13 +757,13 @@ mod tests {
     #[test]
     fn test_generate_branch_name_basic() {
         let result = generate_branch_name("Implement Worktree Support");
-        assert_eq!(result, "chloe/implement-worktree-support");
+        assert_eq!(result, "pied/implement-worktree-support");
     }
 
     #[test]
     fn test_generate_branch_name_with_special_chars() {
         let result = generate_branch_name("Fix bug #123: API timeout");
-        assert_eq!(result, "chloe/fix-bug-123-api-timeout");
+        assert_eq!(result, "pied/fix-bug-123-api-timeout");
     }
 
     #[test]
@@ -819,6 +776,6 @@ mod tests {
     #[test]
     fn test_generate_branch_name_with_consecutive_dashes() {
         let result = generate_branch_name("Multiple   spaces   and---dashes");
-        assert_eq!(result, "chloe/multiple-spaces-and-dashes");
+        assert_eq!(result, "pied/multiple-spaces-and-dashes");
     }
 }

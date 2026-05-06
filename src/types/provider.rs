@@ -5,10 +5,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum AgentProvider {
     #[default]
-    ClaudeCode,
-    Gemini,
-    Amp,
-    OpenCode,
+    Pi,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -21,26 +18,20 @@ impl AgentProvider {
     #[must_use]
     pub const fn display_name(self) -> &'static str {
         match self {
-            Self::ClaudeCode => "Claude Code",
-            Self::Gemini => "Gemini",
-            Self::Amp => "Amp",
-            Self::OpenCode => "OpenCode",
+            Self::Pi => "Pi",
         }
     }
 
     #[must_use]
     pub const fn command_name(self) -> &'static str {
         match self {
-            Self::ClaudeCode => "claude",
-            Self::Gemini => "gemini",
-            Self::Amp => "amp",
-            Self::OpenCode => "opencode",
+            Self::Pi => "pi",
         }
     }
 
     #[must_use]
     pub const fn all() -> &'static [Self] {
-        &[Self::ClaudeCode, Self::Gemini, Self::Amp, Self::OpenCode]
+        &[Self::Pi]
     }
 
     #[must_use]
@@ -78,29 +69,8 @@ impl AgentProvider {
     #[must_use]
     pub fn default_config(self) -> ProviderConfig {
         match self {
-            Self::ClaudeCode => ProviderConfig {
-                command: "claude".into(),
-                arguments: vec![],
-                environment: HashMap::new(),
-                working_directory_argument: None,
-                supports_worktree: true,
-            },
-            Self::Gemini => ProviderConfig {
-                command: "gemini".into(),
-                arguments: vec![],
-                environment: HashMap::new(),
-                working_directory_argument: None,
-                supports_worktree: true,
-            },
-            Self::Amp => ProviderConfig {
-                command: "amp".into(),
-                arguments: vec![],
-                environment: HashMap::new(),
-                working_directory_argument: None,
-                supports_worktree: true,
-            },
-            Self::OpenCode => ProviderConfig {
-                command: "opencode".into(),
+            Self::Pi => ProviderConfig {
+                command: "pi".into(),
                 arguments: vec![],
                 environment: HashMap::new(),
                 working_directory_argument: None,

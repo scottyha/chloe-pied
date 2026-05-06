@@ -1,7 +1,4 @@
-mod amp;
-mod claude_code;
-mod gemini;
-mod opencode;
+mod pi;
 
 use crate::types::{AgentProvider, PermissionConfig};
 use std::collections::HashMap;
@@ -12,7 +9,7 @@ pub struct ProviderSpec {
     pub command: &'static str,
     pub prompt_style: PromptStyle,
     pub oneshot_style: OneShotPromptStyle,
-    generate_files: fn(Uuid, &Path, &PermissionConfig) -> Vec<GeneratedFile>,
+    pub generate_files: fn(Uuid, &Path, &PermissionConfig) -> Vec<GeneratedFile>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -101,10 +98,7 @@ impl ProviderSpec {
 #[must_use]
 pub fn get_spec(provider: AgentProvider) -> &'static ProviderSpec {
     match provider {
-        AgentProvider::ClaudeCode => &claude_code::SPEC,
-        AgentProvider::Gemini => &gemini::SPEC,
-        AgentProvider::Amp => &amp::SPEC,
-        AgentProvider::OpenCode => &opencode::SPEC,
+        AgentProvider::Pi => &pi::SPEC,
     }
 }
 
@@ -114,28 +108,19 @@ mod tests {
 
     #[test]
     fn test_build_command_direct_prompt() {
-        let spec = get_spec(AgentProvider::ClaudeCode);
+        let spec = get_spec(AgentProvider::Pi);
         let command = spec.build_command("Fix the bug");
 
-        assert_eq!(command.program, "claude");
+        assert_eq!(command.program, "pi");
         assert_eq!(command.arguments, vec!["Fix the bug"]);
     }
 
     #[test]
-    fn test_build_command_flag_prompt() {
-        let spec = get_spec(AgentProvider::OpenCode);
-        let command = spec.build_command("Fix the bug");
-
-        assert_eq!(command.program, "opencode");
-        assert_eq!(command.arguments, vec!["--prompt", "Fix the bug"]);
-    }
-
-    #[test]
     fn test_build_command_empty_prompt() {
-        let spec = get_spec(AgentProvider::ClaudeCode);
+        let spec = get_spec(AgentProvider::Pi);
         let command = spec.build_command("");
 
-        assert_eq!(command.program, "claude");
+        assert_eq!(command.program, "pi");
         assert!(command.arguments.is_empty());
     }
 }

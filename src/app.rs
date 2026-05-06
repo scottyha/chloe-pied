@@ -267,13 +267,13 @@ impl App {
     }
 
     #[must_use]
-    pub fn get_instance_claude_state(
+    pub fn get_instance_agent_state(
         &self,
         instance_id: uuid::Uuid,
-    ) -> Option<crate::views::instances::ClaudeState> {
+    ) -> Option<crate::views::instances::AgentState> {
         self.instances
             .find_pane(instance_id)
-            .map(|pane| pane.claude_state)
+            .map(|pane| pane.agent_state)
     }
 
     pub fn auto_transition_completed_tasks(&mut self) {
@@ -281,7 +281,7 @@ impl App {
             .instances
             .collect_panes()
             .iter()
-            .filter(|pane| pane.claude_state == crate::views::instances::ClaudeState::Done)
+            .filter(|pane| pane.agent_state == crate::views::instances::AgentState::Done)
             .map(|pane| pane.id)
             .collect();
 
@@ -311,16 +311,16 @@ impl App {
 
         match event.event_type() {
             crate::events::EventType::Start => {
-                pane.claude_state = crate::views::instances::ClaudeState::Running;
+                pane.agent_state = crate::views::instances::AgentState::Running;
                 let vcs_command = &self.settings.settings.vcs_command;
                 self.tasks
                     .move_task_to_in_progress_by_id(task_id, vcs_command);
             }
             crate::events::EventType::End => {
-                pane.claude_state = crate::views::instances::ClaudeState::Done;
+                pane.agent_state = crate::views::instances::AgentState::Done;
             }
             crate::events::EventType::Permission => {
-                pane.claude_state = crate::views::instances::ClaudeState::NeedsPermissions;
+                pane.agent_state = crate::views::instances::AgentState::NeedsPermissions;
             }
             crate::events::EventType::Unknown(_) => {}
         }
@@ -408,7 +408,7 @@ impl App {
 
         let Some(instance_id) = task.instance_id else {
             self.tasks.error_message =
-                Some("No Claude Code instance associated with this task.".to_string());
+                Some("No agent instance associated with this task.".to_string());
             return;
         };
 

@@ -121,14 +121,14 @@ fn build_task_list_items(
             for task in &column.tasks {
                 let is_selected = is_panel_focused && current_index == selected_index;
                 let instance_id = task.instance_id;
-                let claude_state = instance_id.and_then(|id| app.get_instance_claude_state(id));
+                let agent_state = instance_id.and_then(|id| app.get_instance_agent_state(id));
 
                 items.push(create_task_item(
                     &task.title,
                     task.kind,
                     is_selected,
                     task.is_classifying,
-                    claude_state,
+                    agent_state,
                     title_max_length,
                     app.tasks.spinner_frame,
                 ));
@@ -162,14 +162,14 @@ fn create_task_item(
     task_type: crate::views::tasks::TaskType,
     is_selected: bool,
     is_classifying: bool,
-    claude_state: Option<crate::views::instances::ClaudeState>,
+    agent_state: Option<crate::views::instances::AgentState>,
     title_max_length: usize,
     spinner_frame: usize,
 ) -> ListItem<'static> {
     TaskItem::new(title, task_type)
         .selected(is_selected)
         .classifying(is_classifying)
-        .claude_state(claude_state)
+        .agent_state(agent_state)
         .title_max_length(title_max_length)
         .spinner_frame(spinner_frame)
         .build()

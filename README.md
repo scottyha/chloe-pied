@@ -1,233 +1,109 @@
 <p align="center">
-  <a href="https://getchloe.sh">
-    <img src="docs/public/logos/logo-with-name.svg" alt="Chloe" width="340">
-  </a>
-</p>
-
-<h3 align="center">
-  The terminal-native AI agent orchestrator.<br>
-  <em>Manage multiple AI coding sessions. Zero bloat.</em>
-</h3>
-
-<p align="center">
-  <a href="https://github.com/KevinEdry/chloe/actions/workflows/ci.yml">
-    <img src="https://github.com/KevinEdry/chloe/actions/workflows/ci.yml/badge.svg" alt="CI">
-  </a>
-  <a href="https://github.com/KevinEdry/chloe/releases">
-    <img src="https://img.shields.io/github/v/release/KevinEdry/chloe?label=version" alt="Version">
-  </a>
-  <a href="https://github.com/KevinEdry/chloe/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
-  </a>
-  <a href="https://discord.gg/Pqdb9ZGvVV">
-    <img src="https://img.shields.io/badge/discord-join-5865F2?logo=discord&logoColor=white" alt="Discord">
-  </a>
-  <a href="https://github.com/KevinEdry/chloe">
-    <img src="https://img.shields.io/badge/unsafe-forbidden-success.svg" alt="Unsafe Forbidden">
-  </a>
-  <a href="https://github.com/KevinEdry/chloe">
-    <img src="https://img.shields.io/badge/rust-stable-orange.svg" alt="Rust">
-  </a>
+  <strong>Chloe-pied</strong><br>
+  <em>Pi-native task management for your terminal.</em>
 </p>
 
 <p align="center">
-  <img src="docs/public/demo.gif" alt="Chloe Demo" width="800">
+  <a href="https://github.com/KevinEdry/chloe">
+    <img src="https://img.shields.io/badge/upstream-Chloe-blue.svg" alt="Upstream: Chloe">
+  </a>
+  <a href="https://github.com/scottyha/chloe-pied/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT">
+  </a>
+  <img src="https://img.shields.io/badge/rust-stable-orange.svg" alt="Rust">
+  <img src="https://img.shields.io/badge/unsafe-forbidden-success.svg" alt="Unsafe Forbidden">
 </p>
 
 ---
 
-## Why Chloe?
+## What is this?
 
-AI coding agents are powerful, but managing multiple sessions is chaos. You're juggling terminal tabs, losing context, and watching your system slow to a crawl under Electron-based IDEs.
+**Chloe-pied** is a fork of [Chloe](https://github.com/KevinEdry/chloe) adapted for the [Pi coding agent](https://github.com/mariozechner/pi-coding-agent).
 
-**Chloe fixes this.**
+Chloe is a terminal-native task manager that embeds AI coding sessions alongside a kanban board and roadmap. Chloe-pied replaces the Claude Code integration with Pi, so your tasks spin up `pi` sessions instead.
 
-| | Chloe | Electron-based IDEs |
-|---|:---:|:---:|
-| **Memory footprint** | ~15 MB | 500+ MB |
-| **Startup time** | Instant (<100ms) | 3-10 seconds |
-| **UI latency** | Sub-millisecond | Noticeable lag |
-| **Distribution** | Single 5MB binary | Hundreds of MB |
-| **Dependencies** | None | Node.js, Chromium |
-| **Offline-first** | Yes | Varies |
+If you use Pi as your coding agent and want task management + worktree isolation + embedded terminals in one TUI, this is for you.
 
-### Built for Power Users
+## Differences from upstream Chloe
 
-- **Terminal-native**: Stays in your workflow. No context switching.
-- **Multi-agent orchestration**: Run Claude Code, Gemini CLI, Amp, or OpenCode in parallel panes.
-- **Kanban + terminals**: See what each agent is working on while watching their output.
-- **Git & Jujutsu support**: Each task gets its own worktree (Git) or workspace (Jujutsu), isolated and ready.
-- **100% safe Rust**: Memory safety guaranteed. No undefined behavior. Ever.
+| | Chloe (upstream) | Chloe-pied |
+|---|---|---|
+| **Agent** | Claude Code, Gemini CLI, Amp, OpenCode | Pi |
+| **AI classifier** | Calls Claude Code CLI | Calls Pi CLI (`pi -p`) |
+| **Roadmap gen** | Calls Claude Code CLI | Calls Pi CLI (`pi -p`) |
+| **Hook system** | Unix socket + `chloe notify` for lifecycle events | Uses `chloe-pied notify` (same socket pattern, compatible) |
+| **Config dir** | `.chloe/` | `.chloe-pied/` |
+| **Branch prefix** | `chloe/` | `pied/` |
+| **Agent settings** | Generates `.claude/settings.local.json` per worktree | No per-worktree settings file (Pi uses its own config) |
 
----
+## Features (inherited from Chloe)
 
-## Features
+- **Terminal-native TUI** — Kanban board, focus view, instances, roadmap, all in your terminal
+- **Multi-instance panes** — Split terminal panes per task, each running its own agent
+- **Git worktree support** — Each task gets its own worktree (or Jujutsu workspace)
+- **AI task classification** — Describe a task, get it categorized automatically
+- **AI roadmap generation** — Point at a project, get a prioritized feature roadmap
+- **Activity tracking** — See what your agent did while you weren't watching
+- **~15MB memory footprint** — No Electron, no Node.js, just a Rust binary
 
-### Multi-Provider Support
+## Installation
 
-Works with the AI coding agents you already use:
-
-| Provider | Status |
-|----------|--------|
-| [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | Supported |
-| [Gemini CLI](https://github.com/google-gemini/gemini-cli) | Supported |
-| [Amp](https://ampcode.com/) | Supported |
-| [OpenCode](https://opencode.ai/) | Supported |
-
-Chloe auto-detects installed providers and lets you choose which one to use for each task.
-
-### Task Management
-
-Macro-level visibility into your work:
-- **Kanban board**: To Do, In Progress, Done columns
-- **Task list view**: Dense view for many tasks
-- **Persistent state**: Pick up where you left off
-
-### Interactive Terminal Panes
-
-Full PTY support means real terminal emulation:
-- Split panes horizontally or vertically
-- Keyboard-driven navigation (vim-style)
-- Watch agent output in real-time
-
-### Roadmap View
-
-Plan work across milestones. Visualize what's coming, what's blocked, and what's done.
-
-### Git Worktrees & Jujutsu Workspaces
-
-Parallel development without branch switching:
-- Each task can have its own worktree (Git) or workspace (Jujutsu)
-- Choose your preferred version control system in Settings
-- Isolated environments for each agent
-- No stash/checkout dance
-- Chloe adapts UI terminology based on your VCS choice
-
----
-
-## Quick Start
-
-### Install
+### From source (requires Rust nightly/2024 edition)
 
 ```bash
-curl -fsSL getchloe.sh/install | bash
+git clone https://github.com/scottyha/chloe-pied.git
+cd chloe-pied
+cargo build --release
+cp target/release/chloe-pied /usr/local/bin/
 ```
 
-Or specify a version:
+### Quick start
 
 ```bash
-curl -fsSL getchloe.sh/install | bash -s v0.1.1
+cd your-project
+chloe-pied init
+chloe-pied
 ```
 
-### Build from Source
+## Configuration
 
-```bash
-git clone https://github.com/KevinEdry/chloe.git
-cd chloe
-cargo build --release --locked
-./target/release/chloe
+Settings are stored in `.chloe-pied/settings.json` within each project. The default provider is Pi.
+
+```json
+{
+  "default_shell": "/bin/bash",
+  "auto_save_interval_seconds": 30,
+  "ide_command": "VSCode",
+  "terminal_command": "AppleTerminal",
+  "vcs_command": "Git",
+  "default_provider": "Pi",
+  "skip_provider_selection": true,
+  "provider_registry": {
+    "configs": {
+      "Pi": {
+        "command": "pi",
+        "arguments": [],
+        "environment": {},
+        "working_directory_argument": null,
+        "supports_worktree": true
+      }
+    }
+  }
+}
 ```
 
-### Run
+## Roadmap
 
-```bash
-chloe
-```
+Chloe-pied has a few goals beyond the upstream project:
 
-That's it. No configuration required.
+- [ ] **Pi RPC mode integration** — Instead of embedding Pi as a raw PTY process, use `pi --mode rpc` for structured lifecycle events (`session_start`, `agent_end`, `session_shutdown`). Better status detection than process monitoring alone.
+- [ ] **Sync layer** — Push/pull `.chloe-pied/state.json` to a shared location (PostgreSQL, git remote, or network drive). External task creation via the sync layer.
+- [ ] **Multi-user tasks** — Allow clients/collaborators to inject tasks into a shared project board.
 
----
+## Attribution
 
-## How It Compares
-
-| Feature | Chloe | Cursor | Windsurf | Terminal + tmux |
-|---------|:-----:|:------:|:--------:|:---------------:|
-| Multi-agent orchestration | Yes | No | No | Manual |
-| Task tracking built-in | Yes | No | No | No |
-| Memory usage | ~15 MB | ~500 MB | ~400 MB | ~5 MB |
-| Terminal-native | Yes | No | No | Yes |
-| Single binary | Yes | No | No | Yes |
-| Provider agnostic | Yes | No | No | Yes |
-| Git & Jujutsu support | Yes | No | No | Manual |
-| Offline-capable | Yes | Partial | Partial | Yes |
-
-**Chloe fills a gap**: It's like tmux met a kanban board and learned to speak to AI agents.
-
----
-
-## Keyboard Shortcuts
-
-| Key | Action |
-|-----|--------|
-| `1-4` | Switch tabs |
-| `j/k` | Navigate up/down |
-| `h/l` | Navigate left/right |
-| `Enter` | Select/confirm |
-| `a` | Add task |
-| `d` | Delete |
-| `?` | Help |
-| `q` | Quit |
-
----
-
-## Data Storage
-
-State is stored in `.chloe/state.json` in your project directory:
-- Tasks and their status
-- Instance configurations
-- Roadmap items
-- Settings
-
-All data stays local. No cloud sync. No telemetry.
-
----
-
-## Contributing
-
-Contributions welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
-
-This project uses:
-- [Conventional Commits](https://www.conventionalcommits.org/)
-- CI checks for formatting (`cargo fmt`), linting (`cargo clippy`), and tests
-
-### Code Standards
-
-- **100% safe Rust**: `#![forbid(unsafe_code)]` enforced
-- **No abbreviations**: Full words in identifiers
-- **No magic numbers**: Named constants only
-- **Max 2 levels of nesting**: Early returns required
-
----
-
-## Contributors
-
-<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
-<!-- prettier-ignore-start -->
-<!-- markdownlint-disable -->
-<table>
-  <tbody>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/KevinEdry"><img src="https://avatars.githubusercontent.com/KevinEdry?v=4&s=100" width="100px;" alt="Kevin Edry"/><br /><sub><b>Kevin Edry</b></sub></a><br /><a href="https://github.com/KevinEdry/chloe/commits?author=KevinEdry" title="Code">💻</a> <a href="https://github.com/KevinEdry/chloe/commits?author=KevinEdry" title="Documentation">📖</a> <a href="#maintenance-KevinEdry" title="Maintenance">🚧</a></td>
-    </tr>
-  </tbody>
-</table>
-
-<!-- markdownlint-restore -->
-<!-- prettier-ignore-end -->
-
-<!-- ALL-CONTRIBUTORS-LIST:END -->
-
-This project follows the [all-contributors](https://allcontributors.org) specification.
-
----
-
-## Acknowledgements
-
-- [Auto-Claude](https://github.com/AndyMik90/Auto-Claude) by [@AndyMik90](https://github.com/AndyMik90) - Inspiration
-- [Ratatui](https://github.com/ratatui/ratatui) - Terminal UI framework
-
----
+Chloe-pied is a fork of [Chloe](https://github.com/KevinEdry/chloe) by Kevin Edry, licensed under MIT. The upstream project is the foundation — this fork adds Pi integration and changes the config namespace to avoid conflicts.
 
 ## License
 
-MIT License - see [LICENSE](./LICENSE) for details.
+MIT — see [LICENSE](LICENSE).
