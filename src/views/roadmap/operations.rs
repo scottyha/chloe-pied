@@ -1,6 +1,7 @@
 use super::generator::{GeneratedRoadmap, spawn_roadmap_generation};
 use super::state::{RoadmapItem, RoadmapMode, RoadmapPriority, RoadmapState};
 use crate::events::AppEvent;
+use crate::types::ProviderConfig;
 use chrono::Utc;
 use tokio::sync::mpsc;
 use uuid::Uuid;
@@ -103,10 +104,11 @@ impl RoadmapState {
     pub fn start_generation(
         &mut self,
         project_path: String,
+        provider_config: Option<ProviderConfig>,
         event_sender: mpsc::UnboundedSender<AppEvent>,
     ) {
         self.mode = RoadmapMode::Generating;
-        spawn_roadmap_generation(project_path, event_sender);
+        spawn_roadmap_generation(project_path, provider_config, event_sender);
     }
 
     pub fn handle_generation_completed(&mut self, result: Result<GeneratedRoadmap, String>) {

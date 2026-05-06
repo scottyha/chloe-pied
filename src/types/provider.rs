@@ -72,6 +72,7 @@ impl AgentProvider {
             Self::Pi => ProviderConfig {
                 command: "pi".into(),
                 arguments: vec![],
+                oneshot_arguments: vec![],
                 environment: HashMap::new(),
                 working_directory_argument: None,
                 supports_worktree: true,
@@ -89,7 +90,12 @@ impl std::fmt::Display for AgentProvider {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProviderConfig {
     pub command: PathBuf,
+    /// Extra arguments prepended to the interactive command (e.g., ["--no-orchestrator"])
+    #[serde(default)]
     pub arguments: Vec<String>,
+    /// Extra arguments prepended to oneshot commands (e.g., ["--no-orchestrator", "--no-skills"])
+    #[serde(default)]
+    pub oneshot_arguments: Vec<String>,
     pub environment: HashMap<String, String>,
     pub working_directory_argument: Option<String>,
     pub supports_worktree: bool,

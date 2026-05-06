@@ -176,8 +176,17 @@ fn process_roadmap_action(app: &mut App, action: &AppAction) {
             if let Ok(current_directory) = std::env::current_dir()
                 && let Some(event_sender) = app.event_sender()
             {
+                let provider = app.settings.settings.default_provider;
+                let provider_config = app
+                    .settings
+                    .settings
+                    .provider_registry
+                    .configs
+                    .get(&provider)
+                    .cloned();
                 app.roadmap.start_generation(
                     current_directory.to_string_lossy().to_string(),
+                    provider_config,
                     event_sender,
                 );
             }

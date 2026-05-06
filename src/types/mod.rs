@@ -4,4 +4,4 @@ pub mod provider;
 
 pub use errors::{AppError, Result};
 pub use permissions::{PermissionConfig, PermissionPreset};
-pub use provider::{AgentProvider, DetectedProvider, ProviderRegistry};
+pub use provider::{AgentProvider, DetectedProvider, ProviderConfig, ProviderRegistry};

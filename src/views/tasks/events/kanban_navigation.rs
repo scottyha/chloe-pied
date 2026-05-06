@@ -28,7 +28,6 @@ pub fn handle_kanban_normal_mode(state: &mut TasksState, key: KeyEvent, vcs_comm
         }
         KeyCode::Enter => {
             let is_review_column = state.kanban_selected_column == 2;
-            let is_in_progress_column = state.kanban_selected_column == 1;
 
             if is_review_column {
                 if let Some(task) = state.get_kanban_selected_task() {
@@ -41,7 +40,7 @@ pub fn handle_kanban_normal_mode(state: &mut TasksState, key: KeyEvent, vcs_comm
                         selected_action: ReviewAction::ReviewInIDE,
                     };
                 }
-            } else if !is_in_progress_column {
+            } else {
                 state.move_task_next(vcs_command);
             }
         }

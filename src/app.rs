@@ -198,6 +198,14 @@ impl App {
                 .cloned()
                 .unwrap_or_default();
 
+            let provider_config = self
+                .settings
+                .settings
+                .provider_registry
+                .configs
+                .get(&provider)
+                .cloned();
+
             let config = TaskPaneConfig {
                 task_id,
                 title: task_title,
@@ -209,6 +217,7 @@ impl App {
                 rows: DEFAULT_PTY_ROWS,
                 columns: DEFAULT_PTY_COLUMNS,
                 permission_config,
+                provider_config,
             };
             let instance_id = self.instances.create_pane_for_task(config);
             self.tasks.link_task_to_instance(task_id, instance_id);
@@ -245,6 +254,14 @@ impl App {
                 .cloned()
                 .unwrap_or_default();
 
+            let provider_config = self
+                .settings
+                .settings
+                .provider_registry
+                .configs
+                .get(&provider)
+                .cloned();
+
             let config = TaskPaneConfig {
                 task_id,
                 title: task_title,
@@ -256,6 +273,7 @@ impl App {
                 rows: DEFAULT_PTY_ROWS,
                 columns: DEFAULT_PTY_COLUMNS,
                 permission_config,
+                provider_config,
             };
             let instance_id = self.instances.create_pane_for_task(config);
             self.tasks.link_task_to_instance(task_id, instance_id);

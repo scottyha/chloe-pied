@@ -71,8 +71,15 @@ fn handle_action(app: &mut App, action: TasksAction) {
         TasksAction::CreateTask { title } => {
             if let Some(event_sender) = app.event_sender() {
                 let provider = app.settings.settings.default_provider;
+                let provider_config = app
+                    .settings
+                    .settings
+                    .provider_registry
+                    .configs
+                    .get(&provider)
+                    .cloned();
                 app.tasks
-                    .start_classification(title, provider, event_sender);
+                    .start_classification(title, provider, provider_config, event_sender);
                 let _ = app.save();
             }
         }

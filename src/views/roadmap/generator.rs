@@ -1,6 +1,6 @@
 use super::{RoadmapItem, RoadmapPriority, RoadmapStatus};
 use crate::events::AppEvent;
-use crate::types::{AgentProvider, Result};
+use crate::types::{AgentProvider, ProviderConfig, Result};
 use serde::{Deserialize, Serialize};
 use std::thread;
 use tokio::sync::mpsc;
@@ -26,10 +26,12 @@ pub struct GeneratedRoadmap {
 
 pub fn spawn_roadmap_generation(
     project_path: String,
+    provider_config: Option<ProviderConfig>,
     event_sender: mpsc::UnboundedSender<AppEvent>,
 ) {
     thread::spawn(move || {
-        let result = generate_with_provider(&project_path, AgentProvider::Pi);
+        let result =
+            generate_with_provider(&project_path, AgentProvider::Pi, provider_config.as_ref());
         let event_result = result.map_err(|error| error.to_string());
         let _ = event_sender.send(AppEvent::RoadmapGenerationCompleted {
             result: event_result,
@@ -37,11 +39,15 @@ pub fn spawn_roadmap_generation(
     });
 }
 
-fn generate_with_provider(project_path: &str, provider: AgentProvider) -> Result<GeneratedRoadmap> {
+fn generate_with_provider(
+    project_path: &str,
+    provider: AgentProvider,
+    provider_config: Option<&ProviderConfig>,
+) -> Result<GeneratedRoadmap> {
     let prompt = build_roadmap_prompt(project_path);
 
     let spec = crate::providers::get_spec(provider);
-    let command = spec.build_oneshot_command(&prompt);
+    let command = spec.build_oneshot_command_with_config(&prompt, provider_config);
 
     let mut process_command = std::process::Command::new(&command.program);
     process_command.args(&command.arguments);

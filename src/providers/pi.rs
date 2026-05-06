@@ -23,6 +23,7 @@ fn generate_files(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::ProviderConfig;
 
     #[test]
     fn test_spec_values() {
@@ -31,23 +32,53 @@ mod tests {
 
     #[test]
     fn test_build_command_with_prompt() {
-        let command = SPEC.build_command("Fix the bug");
+        let command = SPEC.build_command_with_config("Fix the bug", None);
         assert_eq!(command.program, "pi");
         assert_eq!(command.arguments, vec!["Fix the bug"]);
     }
 
     #[test]
     fn test_build_command_empty_prompt() {
-        let command = SPEC.build_command("");
+        let command = SPEC.build_command_with_config("", None);
         assert_eq!(command.program, "pi");
         assert!(command.arguments.is_empty());
     }
 
     #[test]
+    fn test_build_command_with_config_overrides() {
+        let config = ProviderConfig {
+            command: "pi".into(),
+            arguments: vec!["--no-orchestrator".to_string()],
+            oneshot_arguments: vec![],
+            environment: std::collections::HashMap::new(),
+            working_directory_argument: None,
+            supports_worktree: true,
+        };
+        let command = SPEC.build_command_with_config("Fix the bug", Some(&config));
+        assert_eq!(command.program, "pi");
+        assert_eq!(command.arguments, vec!["--no-orchestrator", "Fix the bug"]);
+    }
+
+    #[test]
     fn test_build_oneshot_command() {
-        let command = SPEC.build_oneshot_command("Fix the bug");
+        let command = SPEC.build_oneshot_command_with_config("Fix the bug", None);
         assert_eq!(command.program, "pi");
         assert_eq!(command.arguments, vec!["-p", "Fix the bug"]);
+    }
+
+    #[test]
+    fn test_build_oneshot_command_with_config_overrides() {
+        let config = ProviderConfig {
+            command: "pi".into(),
+            arguments: vec![],
+            oneshot_arguments: vec!["--no-orchestrator".to_string(), "--no-skills".to_string()],
+            environment: std::collections::HashMap::new(),
+            working_directory_argument: None,
+            supports_worktree: true,
+        };
+        let command = SPEC.build_oneshot_command_with_config("Fix the bug", Some(&config));
+        assert_eq!(command.program, "pi");
+        assert_eq!(command.arguments, vec!["--no-orchestrator", "--no-skills", "-p", "Fix the bug"]);
     }
 
     #[test]

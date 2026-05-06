@@ -1,6 +1,6 @@
 mod pi;
 
-use crate::types::{AgentProvider, PermissionConfig};
+use crate::types::{AgentProvider, PermissionConfig, ProviderConfig};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
@@ -42,8 +42,17 @@ pub struct ProviderCommand {
 
 impl ProviderSpec {
     #[must_use]
-    pub fn build_command(&self, prompt: &str) -> ProviderCommand {
+    pub fn build_command_with_config(
+        &self,
+        prompt: &str,
+        config: Option<&ProviderConfig>,
+    ) -> ProviderCommand {
         let mut arguments = Vec::new();
+
+        // Prepend config interactive arguments
+        if let Some(cfg) = config {
+            arguments.extend(cfg.arguments.iter().cloned());
+        }
 
         if !prompt.is_empty() {
             match self.prompt_style {
@@ -55,16 +64,33 @@ impl ProviderSpec {
             }
         }
 
+        let program = config
+            .map(|cfg| cfg.command.to_string_lossy().to_string())
+            .unwrap_or_else(|| self.command.to_string());
+
+        let environment = config
+            .map(|cfg| cfg.environment.clone())
+            .unwrap_or_default();
+
         ProviderCommand {
-            program: self.command.to_string(),
+            program,
             arguments,
-            environment: HashMap::new(),
+            environment,
         }
     }
 
     #[must_use]
-    pub fn build_oneshot_command(&self, prompt: &str) -> ProviderCommand {
+    pub fn build_oneshot_command_with_config(
+        &self,
+        prompt: &str,
+        config: Option<&ProviderConfig>,
+    ) -> ProviderCommand {
         let mut arguments = Vec::new();
+
+        // Prepend config oneshot arguments
+        if let Some(cfg) = config {
+            arguments.extend(cfg.oneshot_arguments.iter().cloned());
+        }
 
         match self.oneshot_style {
             OneShotPromptStyle::Direct => {
@@ -80,10 +106,18 @@ impl ProviderSpec {
             }
         }
 
+        let program = config
+            .map(|cfg| cfg.command.to_string_lossy().to_string())
+            .unwrap_or_else(|| self.command.to_string());
+
+        let environment = config
+            .map(|cfg| cfg.environment.clone())
+            .unwrap_or_default();
+
         ProviderCommand {
-            program: self.command.to_string(),
+            program,
             arguments,
-            environment: HashMap::new(),
+            environment,
         }
     }
 
@@ -110,18 +144,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_build_command_direct_prompt() {
+    fn test_build_command_with_config_direct_prompt() {
         let spec = get_spec(AgentProvider::Pi);
-        let command = spec.build_command("Fix the bug");
+        let command = spec.build_command_with_config("Fix the bug", None);
 
         assert_eq!(command.program, "pi");
         assert_eq!(command.arguments, vec!["Fix the bug"]);
     }
 
     #[test]
-    fn test_build_command_empty_prompt() {
+    fn test_build_command_with_config_empty_prompt() {
         let spec = get_spec(AgentProvider::Pi);
-        let command = spec.build_command("");
+        let command = spec.build_command_with_config("", None);
 
         assert_eq!(command.program, "pi");
         assert!(command.arguments.is_empty());

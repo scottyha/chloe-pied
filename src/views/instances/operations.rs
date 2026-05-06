@@ -1,7 +1,7 @@
 use super::state::{InstancePane, InstanceState, PaneNode, SplitDirection};
 use super::{layout, pty};
 use crate::providers::{self, GeneratedFile};
-use crate::types::{AgentProvider, PermissionConfig};
+use crate::types::{AgentProvider, PermissionConfig, ProviderConfig};
 use crate::views::settings::VcsCommand;
 use ratatui::layout::Rect;
 use std::env;
@@ -20,6 +20,7 @@ pub struct TaskPaneConfig {
     pub rows: u16,
     pub columns: u16,
     pub permission_config: PermissionConfig,
+    pub provider_config: Option<ProviderConfig>,
 }
 
 impl InstanceState {
@@ -103,7 +104,7 @@ impl InstanceState {
         write_generated_files(&generated_files);
 
         let prompt = build_task_prompt(&config.title, &config.description, &config.vcs_command);
-        let command = spec.build_command(&prompt);
+        let command = spec.build_command_with_config(&prompt, config.provider_config.as_ref());
 
         if let Some(event_sender) = self.event_sender() {
             let shell_command = build_shell_wrapped_command(&command);

@@ -1,6 +1,6 @@
 use crate::events::AppEvent;
 use crate::providers;
-use crate::types::{AgentProvider, Result};
+use crate::types::{AgentProvider, ProviderConfig, Result};
 use serde::{Deserialize, Serialize};
 use std::thread;
 use tokio::sync::mpsc;
@@ -17,10 +17,11 @@ pub fn spawn_classification(
     raw_input: String,
     task_id: Uuid,
     provider: AgentProvider,
+    provider_config: Option<ProviderConfig>,
     event_sender: mpsc::UnboundedSender<AppEvent>,
 ) {
     thread::spawn(move || {
-        let result = classify_with_provider(&raw_input, provider);
+        let result = classify_with_provider(&raw_input, provider, provider_config.as_ref());
         let event_result = result.map_err(|error| error.to_string());
         let _ = event_sender.send(AppEvent::ClassificationCompleted {
             task_id,
@@ -29,7 +30,11 @@ pub fn spawn_classification(
     });
 }
 
-fn classify_with_provider(raw_input: &str, provider: AgentProvider) -> Result<ClassifiedTask> {
+fn classify_with_provider(
+    raw_input: &str,
+    provider: AgentProvider,
+    provider_config: Option<&ProviderConfig>,
+) -> Result<ClassifiedTask> {
     let prompt = format!(
         r#"Classify this task description and respond with ONLY valid JSON (no markdown, no explanation):
 
@@ -52,7 +57,7 @@ Output JSON only:"#
     );
 
     let spec = providers::get_spec(provider);
-    let command = spec.build_oneshot_command(&prompt);
+    let command = spec.build_oneshot_command_with_config(&prompt, provider_config);
 
     let mut process_command = std::process::Command::new(&command.program);
     process_command.args(&command.arguments);

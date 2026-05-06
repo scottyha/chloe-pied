@@ -98,9 +98,9 @@ pub fn handle_init_command() -> Result<(), String> {
         file.write_all(entry_to_write.as_bytes())
             .map_err(|error| format!("Failed to write to .gitignore: {error}"))?;
 
-            println!("Added .chloe-pied/ to .gitignore");
+        println!("Added .chloe-pied/ to .gitignore");
     } else {
-            println!(".chloe-pied/ already in .gitignore");
+        println!(".chloe-pied/ already in .gitignore");
     }
 
     println!("Chloe-pied initialized successfully!");

@@ -1,5 +1,5 @@
 use crate::events::AppEvent;
-use crate::types::AgentProvider;
+use crate::types::{AgentProvider, ProviderConfig};
 use crate::views::tasks::ai_classifier::{ClassifiedTask, spawn_classification};
 use crate::views::tasks::state::{Task, TaskType, TasksState};
 use tokio::sync::mpsc;
@@ -12,6 +12,7 @@ impl TasksState {
         &mut self,
         raw_input: String,
         provider: AgentProvider,
+        provider_config: Option<ProviderConfig>,
         event_sender: mpsc::UnboundedSender<AppEvent>,
     ) -> Uuid {
         let task = Task::new_classifying(raw_input.clone());
@@ -22,7 +23,7 @@ impl TasksState {
         self.kanban_selected_task = Some(self.columns[PLANNING_COLUMN_INDEX].tasks.len() - 1);
 
         self.pending_classifications.insert(task_id);
-        spawn_classification(raw_input, task_id, provider, event_sender);
+        spawn_classification(raw_input, task_id, provider, provider_config, event_sender);
 
         task_id
     }

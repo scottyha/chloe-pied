@@ -4,13 +4,16 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Padding, Paragraph, Widget},
+    widgets::{Block, Borders, Clear, Padding, Paragraph, Widget, Wrap},
 };
 
 const DIALOG_WIDTH_THRESHOLD: u16 = 80;
 const DIALOG_WIDTH_SMALL: u16 = 80;
 const DIALOG_WIDTH_NORMAL: u16 = 60;
-const DIALOG_HEIGHT: u16 = 7;
+const DIALOG_MIN_HEIGHT: u16 = 7;
+const DIALOG_MAX_HEIGHT: u16 = 15;
+const DIALOG_BORDER_AND_PADDING: u16 = 4;
+const DIALOG_CONTENT_ROWS_ABOVE_MESSAGE: u16 = 1;
 
 pub struct ConfirmDialog<'a> {
     title: &'a str,
@@ -43,7 +46,14 @@ impl Widget for ConfirmDialog<'_> {
             DIALOG_WIDTH_NORMAL
         };
 
-        let popup_area = centered_rect(dialog_width, DIALOG_HEIGHT, area);
+        let content_width = dialog_width.saturating_sub(DIALOG_BORDER_AND_PADDING);
+        let wrapped_lines = calculate_wrapped_line_count(self.message, content_width);
+        let dialog_height =
+            (wrapped_lines + DIALOG_CONTENT_ROWS_ABOVE_MESSAGE + DIALOG_BORDER_AND_PADDING)
+                .clamp(DIALOG_MIN_HEIGHT, DIALOG_MAX_HEIGHT)
+                .min(area.height.saturating_sub(2));
+
+        let popup_area = centered_rect(dialog_width, dialog_height, area);
         let border_color = self.style.color();
 
         Clear.render(popup_area, buf);
@@ -63,10 +73,55 @@ impl Widget for ConfirmDialog<'_> {
         block.render(popup_area, buf);
 
         let text = Paragraph::new(vec![Line::from(""), Line::from(Span::raw(self.message))])
+            .wrap(Wrap { trim: true })
             .alignment(Alignment::Center);
 
         text.render(inner_area, buf);
     }
+}
+
+fn calculate_wrapped_line_count(text: &str, max_width: u16) -> u16 {
+    if text.is_empty() || max_width == 0 {
+        return 1;
+    }
+
+    let max_width = max_width as usize;
+    let mut line_count: u16 = 0;
+
+    for line in text.split('\n') {
+        if line.is_empty() {
+            line_count += 1;
+            continue;
+        }
+
+        line_count += count_wrapped_lines_for_string(line, max_width);
+    }
+
+    line_count.max(1)
+}
+
+fn count_wrapped_lines_for_string(text: &str, max_width: usize) -> u16 {
+    let mut line_count: u16 = 0;
+    let mut current_line_length = 0;
+
+    for word in text.split_whitespace() {
+        let word_length = word.chars().count();
+
+        if current_line_length == 0 {
+            current_line_length = word_length;
+        } else if current_line_length + 1 + word_length <= max_width {
+            current_line_length += 1 + word_length;
+        } else {
+            line_count += 1;
+            current_line_length = word_length;
+        }
+    }
+
+    if current_line_length > 0 {
+        line_count += 1;
+    }
+
+    line_count
 }
 
 fn centered_rect(width: u16, height: u16, area: Rect) -> Rect {
