@@ -49,9 +49,8 @@ impl ProviderSpec {
     ) -> ProviderCommand {
         let mut arguments = Vec::new();
 
-        // Prepend config interactive arguments
-        if let Some(cfg) = config {
-            arguments.extend(cfg.arguments.iter().cloned());
+        if let Some(provider_config) = config {
+            arguments.extend(provider_config.arguments.iter().cloned());
         }
 
         if !prompt.is_empty() {
@@ -64,12 +63,13 @@ impl ProviderSpec {
             }
         }
 
-        let program = config
-            .map(|cfg| cfg.command.to_string_lossy().to_string())
-            .unwrap_or_else(|| self.command.to_string());
+        let program = config.map_or_else(
+            || self.command.to_string(),
+            |provider_config| provider_config.command.to_string_lossy().to_string(),
+        );
 
         let environment = config
-            .map(|cfg| cfg.environment.clone())
+            .map(|provider_config| provider_config.environment.clone())
             .unwrap_or_default();
 
         ProviderCommand {
@@ -87,9 +87,8 @@ impl ProviderSpec {
     ) -> ProviderCommand {
         let mut arguments = Vec::new();
 
-        // Prepend config oneshot arguments
-        if let Some(cfg) = config {
-            arguments.extend(cfg.oneshot_arguments.iter().cloned());
+        if let Some(provider_config) = config {
+            arguments.extend(provider_config.oneshot_arguments.iter().cloned());
         }
 
         match self.oneshot_style {
@@ -106,12 +105,13 @@ impl ProviderSpec {
             }
         }
 
-        let program = config
-            .map(|cfg| cfg.command.to_string_lossy().to_string())
-            .unwrap_or_else(|| self.command.to_string());
+        let program = config.map_or_else(
+            || self.command.to_string(),
+            |provider_config| provider_config.command.to_string_lossy().to_string(),
+        );
 
         let environment = config
-            .map(|cfg| cfg.environment.clone())
+            .map(|provider_config| provider_config.environment.clone())
             .unwrap_or_default();
 
         ProviderCommand {

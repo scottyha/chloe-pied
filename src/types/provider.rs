@@ -90,10 +90,10 @@ impl std::fmt::Display for AgentProvider {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProviderConfig {
     pub command: PathBuf,
-    /// Extra arguments prepended to the interactive command (e.g., ["--no-orchestrator"])
+    /// Extra arguments prepended to the interactive command, for example `--no-orchestrator`.
     #[serde(default)]
     pub arguments: Vec<String>,
-    /// Extra arguments prepended to oneshot commands (e.g., ["--no-orchestrator", "--no-skills"])
+    /// Extra arguments prepended to oneshot commands, for example `--no-orchestrator`.
     #[serde(default)]
     pub oneshot_arguments: Vec<String>,
     pub environment: HashMap<String, String>,

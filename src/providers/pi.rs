@@ -10,14 +10,12 @@ pub static SPEC: ProviderSpec = ProviderSpec {
     generate_files,
 };
 
-fn generate_files(
+const fn generate_files(
     _task_id: Uuid,
     _working_directory: &Path,
     _permission_config: &PermissionConfig,
 ) -> Vec<GeneratedFile> {
-    // Pi doesn't use a settings file like Claude Code's .claude/settings.local.json.
-    // Configuration is managed through pi's own extension and settings system.
-    vec![]
+    Vec::new()
 }
 
 #[cfg(test)]
