@@ -6,12 +6,12 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 
-const VERSION_TEXT_LENGTH: u16 = 13;
+const VERSION_TEXT_LENGTH: u16 = 18;
 
 fn version_text() -> String {
-    format!("Chloe v{}", env!("CARGO_PKG_VERSION"))
+    format!("Chloe-pied v{}", env!("CARGO_PKG_VERSION"))
 }
-const MINIMUM_SPACE_FOR_VERSION: u16 = 15;
+const MINIMUM_SPACE_FOR_VERSION: u16 = 20;
 
 pub struct StatusBarContent {
     pub mode_text: String,
