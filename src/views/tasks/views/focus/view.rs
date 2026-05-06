@@ -208,8 +208,8 @@ pub fn get_status_bar_content(app: &App, width: u16) -> StatusBarContent {
             TasksMode::Normal => {
                 "jk:nav  Tab:panel  a:add  e:edit  d:del  s:start  Bksp:back  /:view"
             }
-            TasksMode::TerminalFocused => "Ctrl+s:scroll  Esc:back",
-            TasksMode::TerminalScroll => "jk:line  Ctrl+d/u:page  g/G:top/bottom  q:exit",
+            TasksMode::TerminalFocused => "Ctrl+q:unfocus  Ctrl+s:scroll",
+            TasksMode::TerminalScroll => "jk:line  Ctrl+d/u:page  g/G:top/bottom  q/Ctrl+q:exit",
             TasksMode::AddingTask { .. } | TasksMode::EditingTask { .. } => {
                 "Enter:save  Esc:cancel"
             }
@@ -230,9 +230,9 @@ pub fn get_status_bar_content(app: &App, width: u16) -> StatusBarContent {
             TasksMode::Normal => {
                 "↑↓/jk:navigate  Tab:switch-panel  a:add  e:edit  d:delete  s:start  Backspace:move-back  /:switch-view"
             }
-            TasksMode::TerminalFocused => "Ctrl+s:scroll-mode  Esc:back-to-navigation",
+            TasksMode::TerminalFocused => "Ctrl+q:unfocus  Ctrl+s:scroll-mode",
             TasksMode::TerminalScroll => {
-                "j/k:scroll-line  Ctrl+d/u:half-page  g/G:top/bottom  q/Esc:exit-scroll"
+                "j/k:scroll-line  Ctrl+d/u:half-page  g/G:top/bottom  q/Esc/Ctrl+q:exit-scroll"
             }
             TasksMode::AddingTask { .. } | TasksMode::EditingTask { .. } => {
                 "Type task title  Enter:save  Esc:cancel"

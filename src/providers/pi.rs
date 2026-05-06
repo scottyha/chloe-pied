@@ -78,7 +78,10 @@ mod tests {
         };
         let command = SPEC.build_oneshot_command_with_config("Fix the bug", Some(&config));
         assert_eq!(command.program, "pi");
-        assert_eq!(command.arguments, vec!["--no-orchestrator", "--no-skills", "-p", "Fix the bug"]);
+        assert_eq!(
+            command.arguments,
+            vec!["--no-orchestrator", "--no-skills", "-p", "Fix the bug"]
+        );
     }
 
     #[test]

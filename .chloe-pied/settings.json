@@ -1,0 +1,48 @@
+{
+  "default_shell": "/bin/bash",
+  "auto_save_interval_seconds": 30,
+  "ide_command": "VSCode",
+  "terminal_command": "ITerm2",
+  "vcs_command": "Git",
+  "default_provider": "Pi",
+  "skip_provider_selection": false,
+  "provider_registry": {
+    "configs": {
+      "Pi": {
+        "command": "pi",
+        "arguments": [],
+        "oneshot_arguments": [],
+        "environment": {},
+        "working_directory_argument": null,
+        "supports_worktree": true
+      }
+    }
+  },
+  "permission_configs": {
+    "Pi": {
+      "allowed_tools": [
+        "Edit",
+        "MultiEdit",
+        "EnterPlanMode",
+        "Bash",
+        "Grep",
+        "Write",
+        "WebSearch",
+        "Read",
+        "AskUserQuestion",
+        "TodoWrite",
+        "Task",
+        "WebFetch",
+        "Skill",
+        "ExitPlanMode",
+        "Glob",
+        "KillShell",
+        "NotebookEdit"
+      ],
+      "sandbox": {
+        "enabled": true,
+        "auto_allow_bash_if_sandboxed": true
+      }
+    }
+  }
+}

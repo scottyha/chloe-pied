@@ -253,9 +253,9 @@ pub fn get_status_bar_content(state: &InstanceState, width: u16) -> StatusBarCon
         }
         super::InstanceMode::Focused => {
             if width < STATUS_BAR_WIDTH_THRESHOLD {
-                "Ctrl+s:scroll  Esc:unfocus"
+                "Ctrl+q:unfocus  Ctrl+s:scroll"
             } else {
-                "Ctrl+s:scroll-mode  Esc:back-to-navigation"
+                "Ctrl+q:unfocus  Ctrl+s:scroll-mode"
             }
         }
         super::InstanceMode::Scroll => {

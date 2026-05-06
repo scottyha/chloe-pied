@@ -73,13 +73,9 @@ impl InstanceState {
     }
 
     fn handle_focused_mode(&mut self, key: KeyEvent) -> EventResult {
-        let is_shift_escape =
-            key.code == KeyCode::Esc && key.modifiers.contains(KeyModifiers::SHIFT);
-        if is_shift_escape {
-            return self.send_escape_to_terminal();
-        }
-
-        if key.code == KeyCode::Esc {
+        let is_ctrl_q =
+            key.code == KeyCode::Char('q') && key.modifiers.contains(KeyModifiers::CONTROL);
+        if is_ctrl_q {
             self.mode = InstanceMode::Normal;
             return EventResult::Consumed;
         }
@@ -204,23 +200,6 @@ impl InstanceState {
             }
             _ => EventResult::Ignored,
         }
-    }
-
-    fn send_escape_to_terminal(&mut self) -> EventResult {
-        let Some(pane) = self.selected_pane_mut() else {
-            return EventResult::Ignored;
-        };
-
-        pane.scroll_to_bottom();
-
-        let Some(pane_id) = self.selected_pane_id else {
-            return EventResult::Ignored;
-        };
-
-        EventResult::Action(AppAction::Terminal(TerminalAction::SendInput {
-            instance_id: pane_id,
-            data: b"\x1b".to_vec(),
-        }))
     }
 
     fn send_input_to_terminal(&self, key: KeyEvent) -> EventResult {
