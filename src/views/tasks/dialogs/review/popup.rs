@@ -17,8 +17,8 @@ use uuid::Uuid;
 const REVIEW_POPUP_WIDTH_PERCENT: u16 = 90;
 const REVIEW_POPUP_HEIGHT_PERCENT: u16 = 90;
 
-const BUTTON_COUNT: usize = 5;
-const BUTTON_WIDTH_PERCENT: u16 = 20;
+const BUTTON_COUNT: usize = 6;
+const BUTTON_WIDTH_PERCENT: u16 = 16;
 
 const STATUS_HEADER_HEIGHT: u16 = 9;
 const BUTTON_ROW_HEIGHT: u16 = 3;

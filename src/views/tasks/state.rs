@@ -304,6 +304,7 @@ pub enum ReviewAction {
     RequestChanges,
     CommitChanges,
     MergeAndComplete,
+    MoveToDone,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -316,13 +317,14 @@ pub enum ReviewPanel {
 
 impl ReviewAction {
     #[must_use]
-    pub const fn all() -> [Self; 5] {
+    pub const fn all() -> [Self; 6] {
         [
             Self::ReviewInIDE,
             Self::ReviewInTerminal,
             Self::RequestChanges,
             Self::CommitChanges,
             Self::MergeAndComplete,
+            Self::MoveToDone,
         ]
     }
 
@@ -334,6 +336,7 @@ impl ReviewAction {
             Self::RequestChanges => "Request Changes".to_string(),
             Self::CommitChanges => "Commit".to_string(),
             Self::MergeAndComplete => "Merge & Complete".to_string(),
+            Self::MoveToDone => "Move to Done".to_string(),
         }
     }
 
@@ -343,6 +346,7 @@ impl ReviewAction {
             Self::ReviewInIDE | Self::ReviewInTerminal | Self::RequestChanges => true,
             Self::CommitChanges => !is_clean,
             Self::MergeAndComplete => is_clean,
+            Self::MoveToDone => true,
         }
     }
 }

@@ -6,6 +6,8 @@ use uuid::Uuid;
 
 const SCROLL_STEP_LINES: usize = 1;
 const PAGE_SCROLL_LINES: usize = 10;
+const REVIEW_COLUMN_INDEX: usize = 2;
+const DONE_COLUMN_INDEX: usize = 3;
 
 #[derive(Clone, Copy)]
 pub struct ReviewPopupState {
@@ -196,7 +198,30 @@ fn execute_review_action(
         ReviewAction::MergeAndComplete => {
             begin_merge_confirmation(state, task_id, is_clean, worktree_info)
         }
+        ReviewAction::MoveToDone => move_review_task_to_done(state, task_id),
     }
+}
+
+fn move_review_task_to_done(state: &mut TasksState, task_id: Uuid) -> TasksAction {
+    let Some(task_index) = state
+        .columns
+        .get(REVIEW_COLUMN_INDEX)
+        .and_then(|column| column.tasks.iter().position(|task| task.id == task_id))
+    else {
+        state.mode = TasksMode::Normal;
+        return TasksAction::None;
+    };
+
+    let mut task = state.columns[REVIEW_COLUMN_INDEX].tasks.remove(task_index);
+    task.worktree_info = None;
+
+    if let Some(instance_id) = task.instance_id.take() {
+        state.pending_instance_termination = Some(instance_id);
+    }
+
+    state.columns[DONE_COLUMN_INDEX].tasks.push(task);
+    state.mode = TasksMode::Normal;
+    TasksAction::None
 }
 
 fn finalize_review_action(state: &mut TasksState, action: TasksAction) -> TasksAction {
