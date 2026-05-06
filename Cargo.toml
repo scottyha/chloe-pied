@@ -18,7 +18,7 @@ uuid = { version = "1.23", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 alacritty_terminal = "0.25"
 anyhow = "1.0"
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.6", features = ["derive"] }
 git2 = "0.20"
 similar = "2.6"
 regex = "1.11"
