@@ -17,6 +17,7 @@ pub struct TaskPaneConfig {
     pub pane_name: Option<String>,
     pub provider: AgentProvider,
     pub vcs_command: VcsCommand,
+    pub omit_no_commit_instruction: bool,
     pub rows: u16,
     pub columns: u16,
     pub permission_config: PermissionConfig,
@@ -103,7 +104,12 @@ impl InstanceState {
         );
         write_generated_files(&generated_files);
 
-        let prompt = build_task_prompt(&config.title, &config.description, &config.vcs_command);
+        let prompt = build_task_prompt(
+            &config.title,
+            &config.description,
+            &config.vcs_command,
+            config.omit_no_commit_instruction,
+        );
         let command = spec.build_command_with_config(&prompt, config.provider_config.as_ref());
 
         if let Some(event_sender) = self.event_sender() {
@@ -292,16 +298,25 @@ fn write_generated_files(files: &[GeneratedFile]) {
     }
 }
 
-fn build_task_prompt(title: &str, description: &str, vcs_command: &VcsCommand) -> String {
+fn build_task_prompt(
+    title: &str,
+    description: &str,
+    vcs_command: &VcsCommand,
+    omit_no_commit_instruction: bool,
+) -> String {
     let base_prompt = if description.is_empty() {
         title.to_string()
     } else {
         format!("Work on this task:\n\nTitle: {title}\n\nDescription: {description}")
     };
 
-    let vcs_cmd = vcs_command.command_name();
+    if omit_no_commit_instruction {
+        return base_prompt;
+    }
+
+    let vcs_command_name = vcs_command.command_name();
     format!(
-        "{base_prompt}\n\nIMPORTANT: Do not commit these changes with '{vcs_cmd} commit' until I explicitly ask you to."
+        "{base_prompt}\n\nIMPORTANT: Do not commit these changes with '{vcs_command_name} commit' until I explicitly ask you to."
     )
 }
 

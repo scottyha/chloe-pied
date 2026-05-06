@@ -1,9 +1,10 @@
 use crate::events::AppEvent;
+use crate::types::ReviewMode;
 use crate::views::instances::InstanceState;
 use crate::views::instances::operations::TaskPaneConfig;
 use crate::views::pull_requests::PullRequestsState;
 use crate::views::roadmap::RoadmapState;
-use crate::views::settings::SettingsState;
+use crate::views::settings::{SettingsState, VcsCommand};
 use crate::views::tasks::{TaskType, TasksState};
 use crate::views::worktree::WorktreeTabState;
 use serde::{Deserialize, Serialize};
@@ -11,6 +12,9 @@ use tokio::sync::mpsc;
 
 const DEFAULT_PTY_ROWS: u16 = 24;
 const DEFAULT_PTY_COLUMNS: u16 = 80;
+const REVIEW_COLUMN_INDEX: usize = 2;
+const REVIEW_PANE_NAME_PREFIX: &str = "Review: ";
+const AGENTIC_REVIEW_FEEDBACK_MESSAGE: &str = "Review feedback: please address the review notes.";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Tab {
@@ -81,6 +85,11 @@ impl App {
                         && !active_instance_ids.contains(&instance_id)
                     {
                         task.instance_id = None;
+                    }
+                    if let Some(review_instance_id) = task.review_instance_id
+                        && !active_instance_ids.contains(&review_instance_id)
+                    {
+                        task.review_instance_id = None;
                     }
                 }
             }
@@ -214,6 +223,7 @@ impl App {
                 pane_name,
                 provider,
                 vcs_command: self.settings.settings.vcs_command.clone(),
+                omit_no_commit_instruction: false,
                 rows: DEFAULT_PTY_ROWS,
                 columns: DEFAULT_PTY_COLUMNS,
                 permission_config,
@@ -270,6 +280,7 @@ impl App {
                 pane_name,
                 provider,
                 vcs_command: self.settings.settings.vcs_command.clone(),
+                omit_no_commit_instruction: false,
                 rows: DEFAULT_PTY_ROWS,
                 columns: DEFAULT_PTY_COLUMNS,
                 permission_config,
@@ -303,12 +314,31 @@ impl App {
             .map(|pane| pane.id)
             .collect();
 
+        let mut task_ids_moved_to_review = Vec::new();
+
         for instance_id in completed_instances {
-            self.tasks.move_task_to_review_by_instance(instance_id);
+            let task_id = self.find_task_id_by_instance(instance_id);
+            if self.tasks.move_task_to_review_by_instance(instance_id)
+                && let Some(task_id) = task_id
+            {
+                task_ids_moved_to_review.push(task_id);
+            }
+        }
+
+        if self.settings.settings.review_mode != ReviewMode::Agentic {
+            return;
+        }
+
+        for task_id in task_ids_moved_to_review {
+            self.spawn_review_agent(task_id);
         }
     }
 
     pub fn process_hook_event(&mut self, event: &crate::events::HookEvent) {
+        if self.process_review_hook_event(event) {
+            return;
+        }
+
         let task_id = event.worktree_id;
 
         let instance_id = self
@@ -342,6 +372,176 @@ impl App {
             }
             crate::events::EventType::Unknown(_) => {}
         }
+    }
+
+    fn find_task_id_by_instance(&self, instance_id: uuid::Uuid) -> Option<uuid::Uuid> {
+        self.tasks
+            .columns
+            .iter()
+            .flat_map(|column| &column.tasks)
+            .find(|task| task.instance_id == Some(instance_id))
+            .map(|task| task.id)
+    }
+
+    fn spawn_review_agent(&mut self, task_id: uuid::Uuid) {
+        let Some((title, description, working_directory, provider)) =
+            self.review_spawn_details(task_id)
+        else {
+            return;
+        };
+
+        let permission_config = self
+            .settings
+            .settings
+            .permission_configs
+            .get(&provider)
+            .cloned()
+            .unwrap_or_default();
+
+        let provider_config = self
+            .settings
+            .settings
+            .provider_registry
+            .configs
+            .get(&provider)
+            .cloned();
+
+        let review_prompt =
+            build_review_prompt(&title, &description, &self.settings.settings.vcs_command);
+        let pane_name = Some(format!("{REVIEW_PANE_NAME_PREFIX}{title}"));
+        let config = TaskPaneConfig {
+            task_id,
+            title: review_prompt,
+            description: String::new(),
+            working_directory: Some(working_directory),
+            pane_name,
+            provider,
+            vcs_command: self.settings.settings.vcs_command.clone(),
+            omit_no_commit_instruction: true,
+            rows: DEFAULT_PTY_ROWS,
+            columns: DEFAULT_PTY_COLUMNS,
+            permission_config,
+            provider_config,
+        };
+
+        let instance_id = self.instances.create_pane_for_task(config);
+        self.tasks
+            .set_task_review_instance(task_id, Some(instance_id));
+        let _ = self.save();
+    }
+
+    fn review_spawn_details(
+        &self,
+        task_id: uuid::Uuid,
+    ) -> Option<(
+        String,
+        String,
+        std::path::PathBuf,
+        crate::types::AgentProvider,
+    )> {
+        let review_column = self.tasks.columns.get(REVIEW_COLUMN_INDEX)?;
+        let task = review_column.tasks.iter().find(|task| task.id == task_id)?;
+
+        if task.review_instance_id.is_some() {
+            return None;
+        }
+
+        let worktree_info = task.worktree_info.as_ref()?;
+        let provider = task
+            .provider
+            .unwrap_or(self.settings.settings.default_provider);
+
+        Some((
+            task.title.clone(),
+            task.description.clone(),
+            worktree_info.worktree_path.clone(),
+            provider,
+        ))
+    }
+
+    fn process_review_hook_event(&mut self, event: &crate::events::HookEvent) -> bool {
+        let task_id = event.worktree_id;
+        let Some((review_instance_id, worktree_path)) = self.review_hook_details(task_id) else {
+            return false;
+        };
+
+        match event.event_type() {
+            crate::events::EventType::Start => {
+                self.set_review_agent_state(
+                    review_instance_id,
+                    crate::views::instances::AgentState::Running,
+                );
+            }
+            crate::events::EventType::End => {
+                self.complete_agentic_review(task_id, review_instance_id, &worktree_path);
+            }
+            crate::events::EventType::Permission => {
+                self.set_review_agent_state(
+                    review_instance_id,
+                    crate::views::instances::AgentState::NeedsPermissions,
+                );
+            }
+            crate::events::EventType::Unknown(_) => return false,
+        }
+
+        true
+    }
+
+    fn review_hook_details(&self, task_id: uuid::Uuid) -> Option<(uuid::Uuid, std::path::PathBuf)> {
+        let review_column = self.tasks.columns.get(REVIEW_COLUMN_INDEX)?;
+        let task = review_column.tasks.iter().find(|task| task.id == task_id)?;
+        let review_instance_id = task.review_instance_id?;
+        let worktree_path = task.worktree_info.as_ref()?.worktree_path.clone();
+
+        Some((review_instance_id, worktree_path))
+    }
+
+    fn set_review_agent_state(
+        &mut self,
+        review_instance_id: uuid::Uuid,
+        agent_state: crate::views::instances::AgentState,
+    ) {
+        let Some(pane) = self.instances.find_pane_mut(review_instance_id) else {
+            return;
+        };
+
+        pane.agent_state = agent_state;
+    }
+
+    fn complete_agentic_review(
+        &mut self,
+        task_id: uuid::Uuid,
+        review_instance_id: uuid::Uuid,
+        worktree_path: &std::path::Path,
+    ) {
+        self.set_review_agent_state(
+            review_instance_id,
+            crate::views::instances::AgentState::Done,
+        );
+
+        let Ok(status) = crate::views::worktree::get_worktree_status(worktree_path) else {
+            self.tasks.error_message = Some("Failed to check review worktree status.".to_string());
+            return;
+        };
+
+        self.tasks.set_task_review_instance(task_id, None);
+
+        if status.is_clean {
+            let vcs_command = &self.settings.settings.vcs_command;
+            self.tasks.move_task_to_done_by_id(task_id, vcs_command);
+            let _ = self.save();
+            return;
+        }
+
+        let vcs_command = &self.settings.settings.vcs_command;
+        if let Some(instance_id) = self
+            .tasks
+            .move_task_to_in_progress_by_id(task_id, vcs_command)
+        {
+            self.instances
+                .send_input_to_instance(instance_id, AGENTIC_REVIEW_FEEDBACK_MESSAGE);
+        }
+        let _ = self.save();
     }
 
     pub fn open_task_in_ide(&self, task_id: uuid::Uuid) {
@@ -563,6 +763,12 @@ Do not push to remote.";
                 .send_input_to_instance(instance_id, &conflict_message);
         }
     }
+}
+
+fn build_review_prompt(title: &str, description: &str, _vcs_command: &VcsCommand) -> String {
+    format!(
+        "You are a code reviewer for task: \"{title}\"\n\nDescription: {description}\n\n1. Run `git diff` in this worktree to see all changes made.\n2. Review the diff for correctness, completeness, and code quality.\n3. If the changes look good: stage all changes (`git add -A`) and commit with a clear, descriptive message. Then type: REVIEW_COMPLETE\n4. If changes need work: describe what needs to be fixed, but do NOT commit. Then type: REVIEW_REQUEST_CHANGES\n\nFocus on: correctness, missing error handling, incomplete implementations, and obvious bugs. Do not nitpick style preferences."
+    )
 }
 
 impl Default for App {

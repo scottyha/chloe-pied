@@ -144,6 +144,17 @@ impl TasksState {
         }
     }
 
+    pub fn set_task_review_instance(&mut self, task_id: Uuid, instance_id: Option<Uuid>) {
+        for column in &mut self.columns {
+            for task in &mut column.tasks {
+                if task.id == task_id {
+                    task.review_instance_id = instance_id;
+                    return;
+                }
+            }
+        }
+    }
+
     #[must_use]
     pub fn find_task_by_id(&self, task_id: Uuid) -> Option<&Task> {
         for column in &self.columns {
@@ -256,6 +267,8 @@ pub struct Task {
     #[serde(default)]
     pub instance_id: Option<Uuid>,
     #[serde(default)]
+    pub review_instance_id: Option<Uuid>,
+    #[serde(default)]
     pub is_paused: bool,
     #[serde(default)]
     pub worktree_info: Option<WorktreeInfo>,
@@ -274,6 +287,7 @@ impl Task {
             kind,
             provider: None,
             instance_id: None,
+            review_instance_id: None,
             is_paused: false,
             worktree_info: None,
             is_classifying: false,
@@ -290,6 +304,7 @@ impl Task {
             kind: TaskType::Task,
             provider: None,
             instance_id: None,
+            review_instance_id: None,
             is_paused: false,
             worktree_info: None,
             is_classifying: true,
@@ -343,10 +358,12 @@ impl ReviewAction {
     #[must_use]
     pub const fn is_enabled(self, is_clean: bool) -> bool {
         match self {
-            Self::ReviewInIDE | Self::ReviewInTerminal | Self::RequestChanges => true,
+            Self::ReviewInIDE
+            | Self::ReviewInTerminal
+            | Self::RequestChanges
+            | Self::MoveToDone => true,
             Self::CommitChanges => !is_clean,
             Self::MergeAndComplete => is_clean,
-            Self::MoveToDone => true,
         }
     }
 }
