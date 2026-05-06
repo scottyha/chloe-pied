@@ -107,7 +107,7 @@ impl InstanceState {
         let command = spec.build_command_with_config(&prompt, config.provider_config.as_ref());
 
         if let Some(event_sender) = self.event_sender() {
-            let shell_command = build_shell_wrapped_command(&command);
+            let shell_command = build_shell_wrapped_command(&command, config.task_id);
             let spawn_options = pty::SpawnOptions::new(
                 pane_id,
                 working_directory,
@@ -307,6 +307,7 @@ fn build_task_prompt(title: &str, description: &str, vcs_command: &VcsCommand) -
 
 fn build_shell_wrapped_command(
     command: &crate::providers::ProviderCommand,
+    task_id: Uuid,
 ) -> (String, Vec<String>) {
     let mut full_command = escape_shell_arg(&command.program);
 
@@ -315,7 +316,8 @@ fn build_shell_wrapped_command(
         full_command.push_str(&escape_shell_arg(arg));
     }
 
-    let shell_script = format!("{full_command}; exec $SHELL");
+    let notify_command = format!("chloe-pied notify end --worktree-id {task_id}");
+    let shell_script = format!("{full_command}; {notify_command} 2>/dev/null; exec $SHELL");
 
     ("bash".to_string(), vec!["-c".to_string(), shell_script])
 }
