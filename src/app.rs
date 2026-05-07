@@ -1,5 +1,5 @@
 use crate::events::AppEvent;
-use crate::types::ReviewMode;
+use crate::types::{ProviderConfig, ReviewMode};
 use crate::views::instances::InstanceState;
 use crate::views::instances::operations::TaskPaneConfig;
 use crate::views::pull_requests::PullRequestsState;
@@ -14,6 +14,8 @@ const DEFAULT_PTY_ROWS: u16 = 24;
 const DEFAULT_PTY_COLUMNS: u16 = 80;
 const REVIEW_COLUMN_INDEX: usize = 2;
 const REVIEW_PANE_NAME_PREFIX: &str = "Review: ";
+const REVIEW_SKILL_PATH: &str = "code-review";
+const REVIEW_MODEL: &str = "google/gemini-3.1-pro-preview:high";
 const AGENTIC_REVIEW_FEEDBACK_MESSAGE: &str = "Review feedback: please address the review notes.";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -398,13 +400,29 @@ impl App {
             .cloned()
             .unwrap_or_default();
 
-        let provider_config = self
+        let base_provider_config = self
             .settings
             .settings
             .provider_registry
             .configs
             .get(&provider)
-            .cloned();
+            .cloned()
+            .unwrap_or_else(|| provider.default_config());
+
+        let skill_path = home_dir_review_skill();
+        let review_provider_config = ProviderConfig {
+            command: base_provider_config.command,
+            arguments: vec![
+                "--skill".to_string(),
+                skill_path,
+                "--model".to_string(),
+                REVIEW_MODEL.to_string(),
+            ],
+            oneshot_arguments: base_provider_config.oneshot_arguments,
+            environment: base_provider_config.environment,
+            working_directory_argument: base_provider_config.working_directory_argument,
+            supports_worktree: base_provider_config.supports_worktree,
+        };
 
         let review_prompt =
             build_review_prompt(&title, &description, &self.settings.settings.vcs_command);
@@ -421,7 +439,7 @@ impl App {
             rows: DEFAULT_PTY_ROWS,
             columns: DEFAULT_PTY_COLUMNS,
             permission_config,
-            provider_config,
+            provider_config: Some(review_provider_config),
         };
 
         let instance_id = self.instances.create_pane_for_task(config);
@@ -793,8 +811,15 @@ Do not push to remote.";
 
 fn build_review_prompt(title: &str, description: &str, _vcs_command: &VcsCommand) -> String {
     format!(
-        "You are a code reviewer for task: \"{title}\"\n\nDescription: {description}\n\n1. Run `git diff` in this worktree to see all changes made.\n2. Review the diff for correctness, completeness, and code quality.\n3. If the changes look good: stage all changes (`git add -A`) and commit with a clear, descriptive message. Then type: REVIEW_COMPLETE\n4. If changes need work: describe what needs to be fixed, but do NOT commit. Then type: REVIEW_REQUEST_CHANGES\n\nFocus on: correctness, missing error handling, incomplete implementations, and obvious bugs. Do not nitpick style preferences."
+        "Review the code changes for task: \"{title}\"\n\nDescription: {description}\n\nFollow the code-review skill instructions. Start by running `git diff` in this worktree to see all changes, then work through the review workflow.\n\nWhen finished:\n- If the changes pass review with no critical/bug/simplify findings: stage all changes (`git add -A`) and commit with a conventional commit message. Then type: REVIEW_COMPLETE\n- If changes need work: describe what needs to be fixed, but do NOT commit. Then type: REVIEW_REQUEST_CHANGES"
     )
+}
+
+fn home_dir_review_skill() -> String {
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| "/tmp".to_string());
+    format!("{home}/.pi/agent/skills/{REVIEW_SKILL_PATH}")
 }
 
 impl Default for App {
