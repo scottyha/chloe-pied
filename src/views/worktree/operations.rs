@@ -41,6 +41,88 @@ fn generate_agent_settings(worktree_path: &Path, task_id: &Uuid) -> Result<()> {
     Ok(())
 }
 
+/// Check if a directory is already a git repository
+#[allow(dead_code)]
+#[must_use]
+pub fn is_git_repo(path: &Path) -> bool {
+    Repository::open(path).is_ok()
+}
+
+/// Check if the GitHub CLI (`gh`) is available on the system
+#[allow(dead_code)]
+#[must_use]
+pub fn is_gh_available() -> bool {
+    std::process::Command::new("gh")
+        .arg("--version")
+        .output()
+        .is_ok()
+}
+
+/// Initialize a new git repository in the given path (equivalent to `git init`)
+///
+/// # Errors
+///
+/// Returns an error if git init cannot be executed or exits unsuccessfully.
+#[allow(dead_code)]
+pub fn init_git_repo(path: &Path) -> Result<()> {
+    let output = std::process::Command::new("git")
+        .arg("init")
+        .current_dir(path)
+        .output()
+        .context("Failed to execute git init")?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let error_message = String::from_utf8_lossy(&output.stderr);
+        Err(anyhow!("git init failed: {error_message}"))
+    }
+}
+
+/// Create a private GitHub repository using the `gh` CLI.
+/// If the directory is not already a git repo, initializes one first.
+/// Returns the remote URL on success.
+///
+/// # Errors
+///
+/// Returns an error if git init, GitHub repository creation, or remote URL lookup fails.
+#[allow(dead_code)]
+pub fn create_github_repo(path: &Path, repo_name: &str) -> Result<String> {
+    if !is_git_repo(path) {
+        init_git_repo(path)?;
+    }
+
+    let create_output = std::process::Command::new("gh")
+        .arg("repo")
+        .arg("create")
+        .arg(repo_name)
+        .arg("--private")
+        .arg("--source=.")
+        .arg("--remote=origin")
+        .arg("--push")
+        .current_dir(path)
+        .output()
+        .context("Failed to execute gh repo create")?;
+
+    if !create_output.status.success() {
+        let stderr = String::from_utf8_lossy(&create_output.stderr);
+        return Err(anyhow!("gh repo create failed: {stderr}"));
+    }
+
+    let remote_output = std::process::Command::new("git")
+        .arg("remote")
+        .arg("get-url")
+        .arg("origin")
+        .current_dir(path)
+        .output()
+        .context("Failed to get remote URL")?;
+
+    let remote_url = String::from_utf8_lossy(&remote_output.stdout)
+        .trim()
+        .to_string();
+    Ok(remote_url)
+}
+
 /// Result of attempting to merge a worktree branch
 #[derive(Debug)]
 pub enum MergeResult {

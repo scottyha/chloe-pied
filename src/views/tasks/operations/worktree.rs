@@ -1,7 +1,7 @@
 use crate::views::settings::VcsCommand;
 use crate::views::tasks::state::{Task, TasksMode, TasksState, WorktreeSelectionOption};
 use crate::views::worktree::WorktreeInfo;
-use crate::views::worktree::operations::list_worktrees;
+use crate::views::worktree::operations::{is_gh_available, list_worktrees};
 use uuid::Uuid;
 
 impl TasksState {
@@ -22,6 +22,10 @@ impl TasksState {
 
         let Ok(repository_root) = crate::views::worktree::find_repository_root(&current_directory)
         else {
+            let mut options = vec![WorktreeSelectionOption::InitLocalRepo];
+            if is_gh_available() {
+                options.push(WorktreeSelectionOption::CreateOnGitHub);
+            }
             return options;
         };
 

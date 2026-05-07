@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::views::tasks::state::WorktreeSelectionOption;
 use crate::views::worktree::WorktreeInfo;
+use crate::views::worktree::operations::{create_github_repo, init_git_repo};
 
 impl TasksState {
     pub fn move_task_next(&mut self, vcs_command: &VcsCommand) {
@@ -337,6 +338,58 @@ impl TasksState {
 
         let task_title = task.map(|task| task.title.clone())?;
         let worktree_info = match worktree_option {
+            WorktreeSelectionOption::InitLocalRepo => {
+                let current_directory = match std::env::current_dir() {
+                    Ok(current_directory) => current_directory,
+                    Err(error) => {
+                        self.error_message =
+                            Some(format!("Failed to get current directory: {error}"));
+                        return None;
+                    }
+                };
+
+                if let Err(error) = init_git_repo(&current_directory) {
+                    self.error_message =
+                        Some(format!("Failed to initialize git repository: {error}"));
+                    return None;
+                }
+
+                match Self::create_worktree_for_new_task(&task_title, &task_id, vcs_command) {
+                    Ok(info) => info,
+                    Err(error) => {
+                        self.error_message = Some(format!("Failed to create worktree: {error}"));
+                        return None;
+                    }
+                }
+            }
+            WorktreeSelectionOption::CreateOnGitHub => {
+                let current_directory = match std::env::current_dir() {
+                    Ok(current_directory) => current_directory,
+                    Err(error) => {
+                        self.error_message =
+                            Some(format!("Failed to get current directory: {error}"));
+                        return None;
+                    }
+                };
+                let repository_name = current_directory
+                    .file_name()
+                    .and_then(|file_name| file_name.to_str())
+                    .unwrap_or("my-project");
+
+                if let Err(error) = create_github_repo(&current_directory, repository_name) {
+                    self.error_message =
+                        Some(format!("Failed to create GitHub repository: {error}"));
+                    return None;
+                }
+
+                match Self::create_worktree_for_new_task(&task_title, &task_id, vcs_command) {
+                    Ok(info) => info,
+                    Err(error) => {
+                        self.error_message = Some(format!("Failed to create worktree: {error}"));
+                        return None;
+                    }
+                }
+            }
             WorktreeSelectionOption::AutoCreate => {
                 match Self::create_worktree_for_new_task(&task_title, &task_id, vcs_command) {
                     Ok(info) => info,

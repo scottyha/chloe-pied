@@ -620,24 +620,50 @@ impl App {
     }
 
     pub fn commit_task_changes(&mut self, task_id: uuid::Uuid) {
-        let Some(task) = self.tasks.find_task_by_id(task_id) else {
+        let task_info = self.tasks.find_task_by_id(task_id).map(|task| {
+            (
+                task.instance_id,
+                task.worktree_info.clone(),
+                task.kind,
+                task.title.clone(),
+            )
+        });
+
+        let Some((instance_id, worktree_info, task_kind, task_title)) = task_info else {
             return;
         };
 
-        let Some(instance_id) = task.instance_id else {
-            self.tasks.error_message =
-                Some("No agent instance associated with this task.".to_string());
-            return;
-        };
-
-        let commit_prompt = "Please commit the current changes. Review what's been modified and create appropriate atomic commits with clear, descriptive messages.
+        if let Some(instance_id) = instance_id {
+            let commit_prompt = "Please commit the current changes. Review what's been modified and create appropriate atomic commits with clear, descriptive messages.
 
 Before committing, check if this repository has commit message standards or conventions defined (e.g., in CONTRIBUTING.md, README.md, or commit config files like commitlint.config.js, .commitlintrc, committed.toml). If standards exist, follow them. If not, use sensible defaults.
 
 Do not push to remote.";
 
-        self.instances
-            .send_input_to_instance(instance_id, commit_prompt);
+            self.instances
+                .send_input_to_instance(instance_id, commit_prompt);
+            return;
+        }
+
+        let Some(worktree_info) = worktree_info else {
+            self.tasks.error_message = Some("No worktree associated with this task.".to_string());
+            return;
+        };
+
+        let commit_type = task_kind.conventional_commit_type();
+        let commit_message = format!("{commit_type}: {task_title}");
+
+        match crate::views::worktree::operations::commit_worktree_changes(
+            &worktree_info.worktree_path,
+            &commit_message,
+        ) {
+            Ok(()) => {
+                self.tasks.error_message = None;
+            }
+            Err(error) => {
+                self.tasks.error_message = Some(format!("Failed to commit: {error}"));
+            }
+        }
     }
 
     pub fn merge_task_branch(

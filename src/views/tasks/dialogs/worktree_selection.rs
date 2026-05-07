@@ -163,6 +163,18 @@ fn render_option(
     let is_selected = index == selected_index;
 
     let content = match option {
+        WorktreeSelectionOption::InitLocalRepo => Line::from(vec![Span::styled(
+            "Initialize local git repository",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        WorktreeSelectionOption::CreateOnGitHub => Line::from(vec![Span::styled(
+            "Create private repository on GitHub",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        )]),
         WorktreeSelectionOption::AutoCreate => Line::from(vec![Span::styled(
             "Create a new worktree",
             Style::default()

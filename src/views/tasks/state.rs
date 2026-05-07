@@ -233,6 +233,17 @@ pub enum TaskType {
 }
 
 impl TaskType {
+    /// Map task type to conventional commit prefix (matches committed.toml allowed_types)
+    #[must_use]
+    pub const fn conventional_commit_type(self) -> &'static str {
+        match self {
+            Self::Feature => "feat",
+            Self::Bug => "fix",
+            Self::Chore => "chore",
+            Self::Task => "feat",
+        }
+    }
+
     #[must_use]
     pub const fn badge_text(self) -> &'static str {
         match self {
@@ -386,6 +397,8 @@ impl MergeTarget {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WorktreeSelectionOption {
+    InitLocalRepo,
+    CreateOnGitHub,
     AutoCreate,
     Existing {
         branch_name: String,
