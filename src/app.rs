@@ -145,6 +145,23 @@ impl App {
         self.tasks = new_tasks;
     }
 
+    pub fn refresh_roadmap_from_disk(&mut self) {
+        let path = crate::persistence::paths::get_state_path();
+        if !path.exists() {
+            return;
+        }
+
+        let Ok(loaded_app) = crate::persistence::storage::load_state() else {
+            return;
+        };
+
+        let mut new_roadmap = loaded_app.roadmap;
+        new_roadmap.sort_items_by_priority();
+        new_roadmap.mode = self.roadmap.mode.clone();
+        new_roadmap.spinner_frame = self.roadmap.spinner_frame;
+        self.roadmap = new_roadmap;
+    }
+
     pub fn save(&self) -> crate::types::Result<()> {
         crate::persistence::storage::save_state(self)
     }

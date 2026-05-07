@@ -70,7 +70,9 @@ pub fn get_status_bar_content(state: &RoadmapState, width: u16) -> StatusBarCont
 
     let help_text = if width < STATUS_BAR_WIDTH_THRESHOLD {
         match &state.mode {
-            RoadmapMode::Normal => "jk:navigate  a:add  g:generate  e:edit  d:delete  t:convert",
+            RoadmapMode::Normal => {
+                "jk:navigate  a:add  g:generate  e:edit  d:delete  r:refresh  t:convert"
+            }
             RoadmapMode::AddingItem { .. } | RoadmapMode::EditingItem { .. } => {
                 "Enter:save  Esc:cancel"
             }
@@ -80,7 +82,7 @@ pub fn get_status_bar_content(state: &RoadmapState, width: u16) -> StatusBarCont
     } else {
         match &state.mode {
             RoadmapMode::Normal => {
-                "↑↓/jk:navigate  a:add  g:generate-with-ai  e:edit  d:delete  t:convert-to-task  p:priority  q:quit"
+                "↑↓/jk:navigate  a:add  g:generate-with-ai  e:edit  d:delete  r:refresh  t:convert-to-task  p:priority  q:quit"
             }
             RoadmapMode::AddingItem { .. } | RoadmapMode::EditingItem { .. } => {
                 "Type to enter text  Enter:save  Esc:cancel"

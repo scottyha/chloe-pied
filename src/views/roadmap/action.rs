@@ -2,4 +2,5 @@
 pub enum RoadmapAction {
     ConvertToTask(usize),
     Generate,
+    Refresh,
 }

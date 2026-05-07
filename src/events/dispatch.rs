@@ -191,6 +191,9 @@ fn process_roadmap_action(app: &mut App, action: &AppAction) {
                 );
             }
         }
+        AppAction::Roadmap(RoadmapAction::Refresh) => {
+            app.refresh_roadmap_from_disk();
+        }
         AppAction::Settings(SettingsAction::SaveState) => {
             let _ = app.save();
         }

@@ -8,6 +8,7 @@ enum RoadmapAction {
     ConvertToTask(usize),
     SaveState,
     GenerateRoadmap,
+    Refresh,
 }
 
 impl EventHandler for RoadmapState {
@@ -35,6 +36,9 @@ impl EventHandler for RoadmapState {
             }
             RoadmapAction::GenerateRoadmap => {
                 EventResult::Action(AppAction::Roadmap(AppRoadmapAction::Generate))
+            }
+            RoadmapAction::Refresh => {
+                EventResult::Action(AppAction::Roadmap(AppRoadmapAction::Refresh))
             }
         }
     }
@@ -95,6 +99,7 @@ impl RoadmapState {
                 RoadmapAction::None
             }
             KeyCode::Char('g' | 'G') => RoadmapAction::GenerateRoadmap,
+            KeyCode::Char('r') => RoadmapAction::Refresh,
             _ => RoadmapAction::None,
         }
     }
