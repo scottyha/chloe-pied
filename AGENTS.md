@@ -682,3 +682,7 @@ bd sync               # Sync with git
 - If push fails, resolve and retry until it succeeds
 
 Use 'bd' for task tracking
+
+## Codebase Map
+
+For architecture details, task creation flow, settings.json structure, and prompt-building locations, see `docs/CODEBASE_MAP.md`.

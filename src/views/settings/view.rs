@@ -244,7 +244,7 @@ fn render_setting_item(
 
 const fn get_item_type_indicator(item: SettingItem) -> &'static str {
     match item {
-        SettingItem::DefaultShell => "[text]",
+        SettingItem::DefaultShell | SettingItem::TaskPromptTemplate => "[text]",
         SettingItem::AutoSaveInterval => "[number]",
         SettingItem::IdeCommand
         | SettingItem::TerminalCommand
@@ -266,6 +266,11 @@ fn get_setting_value_text(item: SettingItem, state: &SettingsState) -> String {
         SettingItem::VcsCommand => state.settings.vcs_command.display_name().to_string(),
         SettingItem::DefaultProvider => state.settings.default_provider.display_name().to_string(),
         SettingItem::ReviewMode => state.settings.review_mode.display_name().to_string(),
+        SettingItem::TaskPromptTemplate => state
+            .settings
+            .task_prompt_template
+            .clone()
+            .unwrap_or_else(|| "Default (no custom template)".to_string()),
         SettingItem::ProviderPermissions => {
             let config = state
                 .settings
@@ -311,6 +316,9 @@ fn render_dialogs(frame: &mut Frame, area: Rect, state: &SettingsState) {
                 "Edit Auto-save Interval (seconds)",
                 &state.edit_buffer,
             );
+        }
+        SettingsMode::EditingTaskPromptTemplate { .. } => {
+            render_text_input_dialog(frame, area, "Edit Task Prompt Template", &state.edit_buffer);
         }
         SettingsMode::ConfiguringPermissions {
             selected_preset_index,
@@ -709,7 +717,9 @@ pub fn get_status_bar_content(state: &SettingsState, width: u16) -> StatusBarCon
                 "CONTENT"
             }
         }
-        SettingsMode::EditingShell { .. } | SettingsMode::EditingAutoSave { .. } => "EDITING",
+        SettingsMode::EditingShell { .. }
+        | SettingsMode::EditingAutoSave { .. }
+        | SettingsMode::EditingTaskPromptTemplate { .. } => "EDITING",
         SettingsMode::SelectingProvider { .. }
         | SettingsMode::SelectingIde { .. }
         | SettingsMode::SelectingTerminal { .. }
@@ -738,6 +748,9 @@ pub fn get_status_bar_content(state: &SettingsState, width: u16) -> StatusBarCon
             }
             SettingsMode::EditingAutoSave { .. } => {
                 "Enter: confirm  Esc: cancel  Type numbers to set interval"
+            }
+            SettingsMode::EditingTaskPromptTemplate { .. } => {
+                "Enter: confirm  Esc: cancel  Type to edit task prompt template"
             }
             SettingsMode::SelectingProvider { .. }
             | SettingsMode::SelectingIde { .. }

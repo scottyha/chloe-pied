@@ -9,6 +9,9 @@ use std::fs;
 use std::path::PathBuf;
 use uuid::Uuid;
 
+const TASK_TITLE_PLACEHOLDER: &str = concat!("{", "title", "}");
+const TASK_DESCRIPTION_PLACEHOLDER: &str = concat!("{", "description", "}");
+
 pub struct TaskPaneConfig {
     pub task_id: Uuid,
     pub title: String,
@@ -18,6 +21,7 @@ pub struct TaskPaneConfig {
     pub provider: AgentProvider,
     pub vcs_command: VcsCommand,
     pub omit_no_commit_instruction: bool,
+    pub task_prompt_template: Option<String>,
     pub rows: u16,
     pub columns: u16,
     pub permission_config: PermissionConfig,
@@ -109,6 +113,7 @@ impl InstanceState {
             &config.description,
             &config.vcs_command,
             config.omit_no_commit_instruction,
+            config.task_prompt_template.as_deref(),
         );
         let command = spec.build_command_with_config(&prompt, config.provider_config.as_ref());
 
@@ -303,12 +308,22 @@ fn build_task_prompt(
     description: &str,
     vcs_command: &VcsCommand,
     omit_no_commit_instruction: bool,
+    task_prompt_template: Option<&str>,
 ) -> String {
-    let base_prompt = if description.is_empty() {
-        title.to_string()
-    } else {
-        format!("Work on this task:\n\nTitle: {title}\n\nDescription: {description}")
-    };
+    let base_prompt = task_prompt_template.map_or_else(
+        || {
+            if description.is_empty() {
+                title.to_string()
+            } else {
+                format!("Work on this task:\n\nTitle: {title}\n\nDescription: {description}")
+            }
+        },
+        |template| {
+            template
+                .replace(TASK_TITLE_PLACEHOLDER, title)
+                .replace(TASK_DESCRIPTION_PLACEHOLDER, description)
+        },
+    );
 
     if omit_no_commit_instruction {
         return base_prompt;

@@ -30,9 +30,9 @@ impl EventHandler for SettingsState {
 pub fn handle_key_event(state: &mut SettingsState, key: KeyEvent) -> SettingsAction {
     match state.mode {
         SettingsMode::Normal => handle_normal_mode(state, key),
-        SettingsMode::EditingShell { .. } | SettingsMode::EditingAutoSave { .. } => {
-            handle_editing_mode(state, key)
-        }
+        SettingsMode::EditingShell { .. }
+        | SettingsMode::EditingAutoSave { .. }
+        | SettingsMode::EditingTaskPromptTemplate { .. } => handle_editing_mode(state, key),
         SettingsMode::SelectingProvider { .. } => handle_provider_selection_mode(state, key),
         SettingsMode::SelectingIde { .. } => handle_ide_selection_mode(state, key),
         SettingsMode::SelectingTerminal { .. } => handle_terminal_selection_mode(state, key),
