@@ -439,29 +439,7 @@ impl App {
             .cloned()
             .unwrap_or_default();
 
-        let base_provider_config = self
-            .settings
-            .settings
-            .provider_registry
-            .configs
-            .get(&provider)
-            .cloned()
-            .unwrap_or_else(|| provider.default_config());
-
-        let skill_path = home_dir_review_skill();
-        let review_provider_config = ProviderConfig {
-            command: base_provider_config.command,
-            arguments: vec![
-                "--skill".to_string(),
-                skill_path,
-                "--model".to_string(),
-                REVIEW_MODEL.to_string(),
-            ],
-            oneshot_arguments: base_provider_config.oneshot_arguments,
-            environment: base_provider_config.environment,
-            working_directory_argument: base_provider_config.working_directory_argument,
-            supports_worktree: base_provider_config.supports_worktree,
-        };
+        let review_provider_config = self.review_provider_config(provider);
 
         let review_prompt =
             build_review_prompt(&title, &description, &self.settings.settings.vcs_command);
@@ -486,6 +464,31 @@ impl App {
         self.tasks
             .set_task_review_instance(task_id, Some(instance_id));
         let _ = self.save();
+    }
+
+    fn review_provider_config(&self, provider: crate::types::AgentProvider) -> ProviderConfig {
+        let base_provider_config = self
+            .settings
+            .settings
+            .provider_registry
+            .configs
+            .get(&provider)
+            .cloned()
+            .unwrap_or_else(|| provider.default_config());
+
+        ProviderConfig {
+            command: base_provider_config.command,
+            arguments: vec![
+                "--skill".to_string(),
+                home_dir_review_skill(),
+                "--model".to_string(),
+                REVIEW_MODEL.to_string(),
+            ],
+            oneshot_arguments: base_provider_config.oneshot_arguments,
+            environment: base_provider_config.environment,
+            working_directory_argument: base_provider_config.working_directory_argument,
+            supports_worktree: base_provider_config.supports_worktree,
+        }
     }
 
     fn review_spawn_details(
