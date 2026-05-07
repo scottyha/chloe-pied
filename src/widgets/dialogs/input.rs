@@ -64,8 +64,12 @@ impl Widget for InputDialog<'_> {
         let inner_area = block.inner(popup_area);
         block.render(popup_area, buf);
 
+        let visible_lines = inner_area.height;
+        let scroll_offset = content_height.saturating_sub(visible_lines);
         let input_with_cursor = format!("{}▏", self.input);
-        let input_text = Paragraph::new(input_with_cursor).wrap(Wrap { trim: false });
+        let input_text = Paragraph::new(input_with_cursor)
+            .wrap(Wrap { trim: false })
+            .scroll((scroll_offset, 0));
 
         input_text.render(inner_area, buf);
     }
