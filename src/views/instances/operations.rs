@@ -1,6 +1,6 @@
 use super::state::{InstancePane, InstanceState, PaneNode, SplitDirection};
 use super::{layout, pty};
-use crate::providers::{self, GeneratedFile};
+use crate::providers::{self, GeneratedFile, ProviderCommand};
 use crate::types::{AgentProvider, PermissionConfig, ProviderConfig};
 use crate::views::settings::VcsCommand;
 use ratatui::layout::Rect;
@@ -339,24 +339,45 @@ fn build_task_prompt(
     )
 }
 
-fn build_shell_wrapped_command(
-    command: &crate::providers::ProviderCommand,
-    task_id: Uuid,
-) -> (String, Vec<String>) {
-    let mut full_command = escape_shell_arg(&command.program);
-
-    for arg in &command.arguments {
-        full_command.push(' ');
-        full_command.push_str(&escape_shell_arg(arg));
-    }
-
-    let notify_command = format!("chloe-pied notify end --worktree-id {task_id}");
-    let shell_script = format!("{full_command}; {notify_command} 2>/dev/null; exec $SHELL");
+fn build_shell_wrapped_command(command: &ProviderCommand, task_id: Uuid) -> (String, Vec<String>) {
+    let full_command = build_notification_command(command, task_id);
+    let shell_script = format!("{full_command}; exec $SHELL");
 
     ("bash".to_string(), vec!["-c".to_string(), shell_script])
 }
 
-fn escape_shell_arg(arg: &str) -> String {
+#[must_use]
+pub fn build_notification_command(command: &ProviderCommand, task_id: Uuid) -> String {
+    let mut full_command = build_environment_prefix(command);
+
+    if !full_command.is_empty() {
+        full_command.push(' ');
+    }
+
+    full_command.push_str(&escape_shell_arg(&command.program));
+
+    for argument in &command.arguments {
+        full_command.push(' ');
+        full_command.push_str(&escape_shell_arg(argument));
+    }
+
+    let notify_command = format!("chloe-pied notify end --worktree-id {task_id}");
+    format!("{full_command}; {notify_command} 2>/dev/null")
+}
+
+fn build_environment_prefix(command: &ProviderCommand) -> String {
+    let mut environment: Vec<_> = command.environment.iter().collect();
+    environment.sort_by_key(|(key, _)| *key);
+
+    environment
+        .into_iter()
+        .map(|(key, value)| format!("{key}={}", escape_shell_arg(value)))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+#[must_use]
+pub fn escape_shell_arg(arg: &str) -> String {
     if arg
         .chars()
         .all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.' || c == '/')
