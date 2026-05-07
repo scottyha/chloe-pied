@@ -44,6 +44,11 @@ fn get_selected_instance_id(app: &App) -> Option<Uuid> {
 fn handle_action(app: &mut App, action: TasksAction) {
     match action {
         TasksAction::None => {}
+        TasksAction::RefreshTasks => {
+            app.refresh_tasks_from_disk();
+            app.tasks.clamp_focus_selection();
+            let _ = app.save();
+        }
         TasksAction::JumpToInstance(instance_id) => {
             app.active_tab = Tab::Instances;
             app.instances.select_pane_by_id(instance_id);

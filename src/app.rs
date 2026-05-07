@@ -108,6 +108,43 @@ impl App {
         }
     }
 
+    pub fn refresh_tasks_from_disk(&mut self) {
+        let path = crate::persistence::paths::get_state_path();
+        if !path.exists() {
+            return;
+        }
+
+        let Ok(loaded_app) = crate::persistence::storage::load_state() else {
+            return;
+        };
+
+        let active_instance_ids: Vec<uuid::Uuid> = self
+            .instances
+            .collect_panes()
+            .iter()
+            .map(|pane| pane.id)
+            .collect();
+
+        let mut new_tasks = loaded_app.tasks;
+        for column in &mut new_tasks.columns {
+            for task in &mut column.tasks {
+                if let Some(instance_id) = task.instance_id
+                    && !active_instance_ids.contains(&instance_id)
+                {
+                    task.instance_id = None;
+                }
+                if let Some(review_instance_id) = task.review_instance_id
+                    && !active_instance_ids.contains(&review_instance_id)
+                {
+                    task.review_instance_id = None;
+                }
+            }
+        }
+
+        new_tasks.view_mode = self.tasks.view_mode;
+        self.tasks = new_tasks;
+    }
+
     pub fn save(&self) -> crate::types::Result<()> {
         crate::persistence::storage::save_state(self)
     }

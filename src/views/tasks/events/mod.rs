@@ -15,6 +15,7 @@ use uuid::Uuid;
 
 pub enum TasksAction {
     None,
+    RefreshTasks,
     JumpToInstance(Uuid),
     SendToTerminal(Uuid, Vec<u8>),
     ScrollTerminal {
@@ -69,6 +70,10 @@ pub fn handle_key_event(
     if state.mode == TasksMode::Normal && key.code == KeyCode::Char('/') {
         state.toggle_view_mode();
         return TasksAction::None;
+    }
+
+    if state.mode == TasksMode::Normal && key.code == KeyCode::Char('r') {
+        return TasksAction::RefreshTasks;
     }
 
     match &state.mode {

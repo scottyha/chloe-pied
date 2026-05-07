@@ -139,7 +139,7 @@ pub fn get_status_bar_content(app: &App, width: u16) -> StatusBarContent {
 
     let help_text = if width < STATUS_BAR_WIDTH_THRESHOLD {
         match &state.mode {
-            TasksMode::Normal => "hjkl/arrows:navigate  a:add  e:edit  d:delete  /:view",
+            TasksMode::Normal => "hjkl/arrows:navigate  a:add  e:edit  d:delete  r:refresh  /:view",
             TasksMode::AddingTask { .. }
             | TasksMode::EditingTask { .. }
             | TasksMode::ReviewRequestChanges { .. } => "Enter:save  Esc:cancel",
@@ -155,7 +155,7 @@ pub fn get_status_bar_content(app: &App, width: u16) -> StatusBarContent {
     } else {
         match &state.mode {
             TasksMode::Normal => {
-                "↑↓/jk:task  ←→/hl:column  a:add-to-planning  e:edit  d:delete  Enter:move→  Backspace:move←  /:switch-view"
+                "↑↓/jk:task  ←→/hl:column  a:add-to-planning  e:edit  d:delete  r:refresh  Enter:move→  Backspace:move←  /:switch-view"
             }
             TasksMode::AddingTask { .. } => "Type task title  Enter:save  Esc:cancel",
             TasksMode::SelectWorktree { .. } | TasksMode::SelectProvider { .. } => {
