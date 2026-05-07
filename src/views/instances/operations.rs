@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 const TASK_TITLE_PLACEHOLDER: &str = concat!("{", "title", "}");
 const TASK_DESCRIPTION_PLACEHOLDER: &str = concat!("{", "description", "}");
+const TASK_INFO_SEPARATOR: &str = "---\n\n";
 
 pub struct TaskPaneConfig {
     pub task_id: Uuid,
@@ -319,9 +320,12 @@ fn build_task_prompt(
             }
         },
         |template| {
-            template
+            let replaced_template = template
                 .replace(TASK_TITLE_PLACEHOLDER, title)
-                .replace(TASK_DESCRIPTION_PLACEHOLDER, description)
+                .replace(TASK_DESCRIPTION_PLACEHOLDER, description);
+            format!(
+                "{replaced_template}\n\n{TASK_INFO_SEPARATOR}Title: {title}\n\nDescription: {description}"
+            )
         },
     );
 
