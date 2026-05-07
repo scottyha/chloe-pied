@@ -82,6 +82,7 @@ impl SettingsSection {
             Self::Agent => &[
                 SettingItem::DefaultProvider,
                 SettingItem::ProviderPermissions,
+                SettingItem::TaskPromptTemplate,
             ],
             Self::Persistence => &[SettingItem::AutoSaveInterval],
             Self::Review => &[SettingItem::ReviewMode],
@@ -119,6 +120,8 @@ pub struct Settings {
     pub permission_configs: HashMap<AgentProvider, PermissionConfig>,
     #[serde(default)]
     pub review_mode: ReviewMode,
+    #[serde(default)]
+    pub task_prompt_template: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -334,6 +337,7 @@ impl Default for Settings {
             provider_registry: ProviderRegistry::new(),
             permission_configs,
             review_mode: ReviewMode::default(),
+            task_prompt_template: None,
         }
     }
 }
@@ -347,6 +351,9 @@ pub enum SettingsMode {
     },
     EditingAutoSave {
         initial_value: u64,
+    },
+    EditingTaskPromptTemplate {
+        initial_value: String,
     },
     SelectingProvider {
         selected_index: usize,
@@ -377,6 +384,7 @@ pub enum SettingItem {
     VcsCommand,
     DefaultProvider,
     ProviderPermissions,
+    TaskPromptTemplate,
     ReviewMode,
 }
 
@@ -391,6 +399,7 @@ impl SettingItem {
             Self::VcsCommand => "Version Control",
             Self::DefaultProvider => "Default Agent",
             Self::ProviderPermissions => "Agent Permissions",
+            Self::TaskPromptTemplate => "Task Prompt Template",
             Self::ReviewMode => "Review Mode",
         }
     }
@@ -561,6 +570,20 @@ impl SettingsState {
                     selected_preset_index: preset_index,
                 };
             }
+            SettingItem::TaskPromptTemplate => {
+                self.edit_buffer = self
+                    .settings
+                    .task_prompt_template
+                    .clone()
+                    .unwrap_or_default();
+                self.mode = SettingsMode::EditingTaskPromptTemplate {
+                    initial_value: self
+                        .settings
+                        .task_prompt_template
+                        .clone()
+                        .unwrap_or_default(),
+                };
+            }
         }
     }
 
@@ -659,6 +682,15 @@ impl SettingsState {
                 self.mode = SettingsMode::Normal;
                 self.edit_buffer.clear();
             }
+            SettingsMode::EditingTaskPromptTemplate { .. } => {
+                if self.edit_buffer.is_empty() {
+                    self.settings.task_prompt_template = None;
+                } else {
+                    self.settings.task_prompt_template = Some(self.edit_buffer.clone());
+                }
+                self.mode = SettingsMode::Normal;
+                self.edit_buffer.clear();
+            }
         }
     }
 
@@ -676,7 +708,7 @@ impl SettingsState {
             | SettingsMode::SelectingVcs { .. }
             | SettingsMode::SelectingReviewMode { .. }
             | SettingsMode::ConfiguringPermissions { .. } => {}
-            SettingsMode::EditingShell { .. } => {
+            SettingsMode::EditingShell { .. } | SettingsMode::EditingTaskPromptTemplate { .. } => {
                 self.edit_buffer.push(character);
             }
             SettingsMode::EditingAutoSave { .. } => {
