@@ -58,6 +58,8 @@ pub fn handle_notify_command(event_type: String, worktree_id: Uuid) -> Result<()
 
 pub fn handle_init_command() -> Result<(), String> {
     let chloe_directory = Path::new(".chloe-pied");
+    let pi_extension_directory = Path::new(".pi/extensions");
+    let pi_extension_path = pi_extension_directory.join("chloe-pied.ts");
     let gitignore_path = Path::new(".gitignore");
     let gitignore_entry = ".chloe-pied/";
 
@@ -65,6 +67,13 @@ pub fn handle_init_command() -> Result<(), String> {
         .map_err(|error| format!("Failed to create .chloe-pied directory: {error}"))?;
 
     println!("Created .chloe-pied/ directory");
+
+    fs::create_dir_all(pi_extension_directory)
+        .map_err(|error| format!("Failed to create .pi/extensions directory: {error}"))?;
+    fs::write(pi_extension_path, include_str!("assets/pi_extension.ts"))
+        .map_err(|error| format!("Failed to write Chloe-pied Pi extension: {error}"))?;
+
+    println!("Installed Pi extension at .pi/extensions/chloe-pied.ts");
 
     let should_add_to_gitignore = if gitignore_path.exists() {
         let contents = fs::read_to_string(gitignore_path)
