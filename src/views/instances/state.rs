@@ -10,8 +10,8 @@ use std::path::PathBuf;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-const MAX_ACTIVITY_EVENTS: usize = 500;
-const ACTIVITY_RETENTION_DAYS: i64 = 7;
+pub const MAX_ACTIVITY_EVENTS: usize = 500;
+pub const ACTIVITY_RETENTION_DAYS: i64 = 7;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SplitDirection {
@@ -294,14 +294,19 @@ impl InstancePane {
         metadata: Option<String>,
     ) {
         let event = ActivityEvent {
+            pane_id: self.id,
             timestamp: Utc::now(),
             event_type,
             description,
             metadata,
         };
 
-        self.activity_events.push_back(event);
+        self.activity_events.push_back(event.clone());
         self.prune_old_activity_events();
+
+        if let Err(error) = crate::persistence::activity_log::append_event(self.id, &event) {
+            eprintln!("Failed to persist activity event: {error}");
+        }
     }
 
     pub fn prune_old_activity_events(&mut self) {

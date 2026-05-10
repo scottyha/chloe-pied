@@ -1,3 +1,4 @@
+pub mod activity_log;
 pub mod paths;
 pub mod storage;
 

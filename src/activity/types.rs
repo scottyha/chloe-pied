@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ActivityEventType {
@@ -12,6 +13,8 @@ pub enum ActivityEventType {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ActivityEvent {
+    #[serde(default)]
+    pub pane_id: Uuid,
     pub timestamp: DateTime<Utc>,
     pub event_type: ActivityEventType,
     pub description: String,

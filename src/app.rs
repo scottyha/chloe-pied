@@ -1,3 +1,4 @@
+use crate::activity::types::ActivityEvent;
 use crate::events::AppEvent;
 use crate::providers;
 use crate::types::{ProviderConfig, ReviewMode};
@@ -9,6 +10,7 @@ use crate::views::settings::{SettingsState, VcsCommand};
 use crate::views::tasks::{TaskType, TasksState};
 use crate::views::worktree::WorktreeTabState;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, VecDeque};
 use tokio::sync::mpsc;
 
 const DEFAULT_PTY_ROWS: u16 = 24;
@@ -42,6 +44,8 @@ pub struct App {
     #[serde(skip)]
     pub showing_exit_confirmation: bool,
     #[serde(skip)]
+    pub cached_historical_events: HashMap<uuid::Uuid, Vec<ActivityEvent>>,
+    #[serde(skip)]
     event_sender: Option<mpsc::UnboundedSender<AppEvent>>,
 }
 
@@ -57,6 +61,7 @@ impl App {
             pull_requests: PullRequestsState::new(),
             settings: SettingsState::new(),
             showing_exit_confirmation: false,
+            cached_historical_events: HashMap::new(),
             event_sender: None,
         }
     }
@@ -99,13 +104,59 @@ impl App {
 
             app.roadmap.sort_items_by_priority();
             app.settings = SettingsState::with_settings(settings);
-            app.instances.prune_all_activity_events();
+            app.load_and_apply_activity_events();
             app
         } else {
-            Self {
+            let mut app = Self {
                 settings: SettingsState::with_settings(settings),
                 ..Default::default()
-            }
+            };
+            app.load_and_apply_activity_events();
+            app
+        }
+    }
+
+    fn load_and_apply_activity_events(&mut self) {
+        self.cached_historical_events.clear();
+
+        if let Err(error) = crate::persistence::activity_log::prune_events(
+            crate::views::instances::state::ACTIVITY_RETENTION_DAYS,
+        ) {
+            eprintln!("Failed to prune activity log: {error}");
+        }
+
+        let Ok(events) = crate::persistence::activity_log::load_all_events() else {
+            return;
+        };
+
+        let mut events_by_pane_id: HashMap<uuid::Uuid, Vec<ActivityEvent>> = HashMap::new();
+        for (pane_id, event) in events {
+            events_by_pane_id.entry(pane_id).or_default().push(event);
+        }
+
+        if let Some(root) = &mut self.instances.root {
+            root.for_each_pane_mut(&mut |pane| {
+                let persisted_events = events_by_pane_id.remove(&pane.id).unwrap_or_default();
+                pane.activity_events = merge_activity_events(
+                    pane.id,
+                    &pane.activity_events,
+                    persisted_events,
+                    crate::views::instances::state::ACTIVITY_RETENTION_DAYS,
+                    crate::views::instances::state::MAX_ACTIVITY_EVENTS,
+                );
+            });
+        }
+
+        for (pane_id, events) in events_by_pane_id {
+            self.cached_historical_events.insert(
+                pane_id,
+                retained_cached_activity_events(
+                    pane_id,
+                    events,
+                    crate::views::instances::state::ACTIVITY_RETENTION_DAYS,
+                    crate::views::instances::state::MAX_ACTIVITY_EVENTS,
+                ),
+            );
         }
     }
 
@@ -918,6 +969,47 @@ Do not push to remote.";
                 .send_input_to_instance(instance_id, &conflict_message);
         }
     }
+}
+
+fn merge_activity_events(
+    pane_id: uuid::Uuid,
+    current_events: &VecDeque<ActivityEvent>,
+    persisted_events: Vec<ActivityEvent>,
+    retention_days: i64,
+    maximum_events: usize,
+) -> VecDeque<ActivityEvent> {
+    let merged_events: Vec<ActivityEvent> = current_events
+        .iter()
+        .cloned()
+        .chain(persisted_events)
+        .collect();
+
+    retained_cached_activity_events(pane_id, merged_events, retention_days, maximum_events)
+        .into_iter()
+        .collect()
+}
+
+fn retained_cached_activity_events(
+    pane_id: uuid::Uuid,
+    events: Vec<ActivityEvent>,
+    retention_days: i64,
+    maximum_events: usize,
+) -> Vec<ActivityEvent> {
+    let cutoff_time = chrono::Utc::now() - chrono::Duration::days(retention_days);
+    let mut retained_events: Vec<ActivityEvent> = events
+        .into_iter()
+        .filter(|event| event.timestamp > cutoff_time)
+        .map(|mut event| {
+            event.pane_id = pane_id;
+            event
+        })
+        .collect();
+
+    retained_events.sort_by_key(|event| event.timestamp);
+    retained_events.dedup();
+
+    let events_to_skip = retained_events.len().saturating_sub(maximum_events);
+    retained_events.into_iter().skip(events_to_skip).collect()
 }
 
 fn build_review_prompt(title: &str, description: &str, _vcs_command: &VcsCommand) -> String {
