@@ -14,6 +14,7 @@
 
 #![forbid(unsafe_code)]
 
+mod activity;
 mod app;
 mod cli;
 pub mod events;

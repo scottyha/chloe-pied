@@ -8,6 +8,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod activity;
 pub mod app;
 pub mod cli;
 pub mod events;
