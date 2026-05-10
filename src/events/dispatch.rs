@@ -291,6 +291,9 @@ pub fn handle_app_event(app: &mut App, event: AppEvent) {
         AppEvent::HookReceived(hook_event) => {
             app.process_hook_event(&hook_event);
         }
+        AppEvent::RpcEvent(event) => {
+            crate::views::instances::rpc::handle_rpc_event(app, event);
+        }
     }
 }
 

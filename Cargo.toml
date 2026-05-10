@@ -23,6 +23,7 @@ git2 = "0.20"
 similar = "2.6"
 regex = "1.11"
 dirs = "6.0"
+log = "0.4"
 
 [lints.rust]
 unsafe_code = "forbid"

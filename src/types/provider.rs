@@ -76,6 +76,7 @@ impl AgentProvider {
                 environment: HashMap::new(),
                 working_directory_argument: None,
                 supports_worktree: true,
+                rpc_mode: true,
             },
         }
     }
@@ -99,6 +100,8 @@ pub struct ProviderConfig {
     pub environment: HashMap<String, String>,
     pub working_directory_argument: Option<String>,
     pub supports_worktree: bool,
+    #[serde(default)]
+    pub rpc_mode: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -114,5 +117,52 @@ impl ProviderRegistry {
             configs.insert(*provider, provider.default_config());
         }
         Self { configs }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn old_provider_config_json_defaults_rpc_mode_to_false() {
+        let json = r#"{
+            "command": "pi",
+            "arguments": ["--no-orchestrator"],
+            "oneshot_arguments": [],
+            "environment": {},
+            "working_directory_argument": null,
+            "supports_worktree": true
+        }"#;
+
+        let config: ProviderConfig = serde_json::from_str(json).unwrap();
+
+        assert!(!config.rpc_mode);
+    }
+
+    #[test]
+    fn new_provider_config_json_deserializes_rpc_mode() {
+        let json = r#"{
+            "command": "pi",
+            "arguments": [],
+            "oneshot_arguments": [],
+            "environment": {},
+            "working_directory_argument": null,
+            "supports_worktree": true,
+            "rpc_mode": true
+        }"#;
+
+        let config: ProviderConfig = serde_json::from_str(json).unwrap();
+
+        assert!(config.rpc_mode);
+    }
+
+    #[test]
+    fn provider_config_json_serializes_rpc_mode() {
+        let config = AgentProvider::Pi.default_config();
+
+        let json = serde_json::to_value(config).unwrap();
+
+        assert_eq!(json["rpc_mode"], true);
     }
 }

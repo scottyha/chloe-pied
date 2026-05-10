@@ -51,6 +51,7 @@ mod tests {
             environment: std::collections::HashMap::new(),
             working_directory_argument: None,
             supports_worktree: true,
+            rpc_mode: false,
         };
         let command = SPEC.build_command_with_config("Fix the bug", Some(&config));
         assert_eq!(command.program, "pi");
@@ -73,6 +74,7 @@ mod tests {
             environment: std::collections::HashMap::new(),
             working_directory_argument: None,
             supports_worktree: true,
+            rpc_mode: false,
         };
         let command = SPEC.build_oneshot_command_with_config("Fix the bug", Some(&config));
         assert_eq!(command.program, "pi");

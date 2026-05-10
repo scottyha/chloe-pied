@@ -1,3 +1,4 @@
+use crate::views::instances::rpc::RpcEvent;
 use crate::views::roadmap::GeneratedRoadmap;
 use crate::views::tasks::ai_classifier::ClassifiedTask;
 use uuid::Uuid;
@@ -24,4 +25,5 @@ pub enum AppEvent {
     },
 
     HookReceived(HookEvent),
+    RpcEvent(RpcEvent),
 }

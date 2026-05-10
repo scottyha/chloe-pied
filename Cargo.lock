@@ -236,6 +236,7 @@ dependencies = [
  "dirs",
  "futures",
  "git2",
+ "log",
  "ratatui",
  "regex",
  "serde",

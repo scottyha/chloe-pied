@@ -4,6 +4,7 @@ pub mod events;
 pub mod layout;
 pub mod operations;
 pub mod pty;
+pub mod rpc;
 pub mod state;
 pub mod view;
 
