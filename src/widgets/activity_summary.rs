@@ -1,4 +1,5 @@
-use crate::views::instances::state::ActivitySummary;
+use crate::views::instances::state::{ActivitySummary, ActivitySummaryMode};
+use chrono::Utc;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
@@ -15,14 +16,16 @@ const HEADER_HEIGHT: u16 = 3;
 
 pub struct ActivitySummaryWidget<'a> {
     summary: &'a ActivitySummary,
+    activity_summary_mode: ActivitySummaryMode,
     scroll_offset: usize,
 }
 
 impl<'a> ActivitySummaryWidget<'a> {
     #[must_use]
-    pub const fn new(summary: &'a ActivitySummary) -> Self {
+    pub const fn new(summary: &'a ActivitySummary, mode: ActivitySummaryMode) -> Self {
         Self {
             summary,
+            activity_summary_mode: mode,
             scroll_offset: 0,
         }
     }
@@ -49,8 +52,13 @@ impl Widget for ActivitySummaryWidget<'_> {
 
         Clear.render(popup_area, buffer);
 
+        let title = match self.activity_summary_mode {
+            ActivitySummaryMode::SinceLastViewed => " Activity Summary ",
+            ActivitySummaryMode::FullHistory => " Full Activity History ",
+        };
+
         let block = Block::default()
-            .title(" Activity Summary ")
+            .title(title)
             .title_style(
                 Style::default()
                     .fg(Color::Cyan)
@@ -68,46 +76,70 @@ impl Widget for ActivitySummaryWidget<'_> {
             .constraints([Constraint::Length(HEADER_HEIGHT), Constraint::Min(0)])
             .split(inner_area);
 
-        render_header(self.summary, chunks[0], buffer);
+        render_header(self.summary, self.activity_summary_mode, chunks[0], buffer);
         render_events(self.summary, chunks[1], buffer, self.scroll_offset);
     }
 }
 
-fn render_header(summary: &ActivitySummary, area: Rect, buffer: &mut Buffer) {
-    let elapsed_minutes = summary.elapsed_seconds / 60;
-    let elapsed_seconds = summary.elapsed_seconds % 60;
-    let time_display = if elapsed_minutes > 0 {
-        format!("{elapsed_minutes}m {elapsed_seconds}s ago")
-    } else {
-        format!("{elapsed_seconds}s ago")
-    };
-
+fn render_header(
+    summary: &ActivitySummary,
+    mode: ActivitySummaryMode,
+    area: Rect,
+    buffer: &mut Buffer,
+) {
     let header_lines = vec![
-        Line::from(vec![
-            Span::styled("Since: ", Style::default().fg(Color::Gray)),
-            Span::styled(
-                summary.since.format("%H:%M:%S").to_string(),
-                Style::default()
-                    .fg(Color::White)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(
-                format!(" ({time_display})"),
-                Style::default().fg(Color::DarkGray),
-            ),
-        ]),
+        render_time_line(summary, mode),
         Line::from(vec![
             Span::styled("Activity: ", Style::default().fg(Color::Gray)),
             Span::styled(
                 summary.format_as_summary_line(),
                 Style::default().fg(Color::Cyan),
             ),
+            Span::styled("  (f: toggle mode)", Style::default().fg(Color::DarkGray)),
         ]),
         Line::from(""),
     ];
 
-    let header_paragraph = Paragraph::new(header_lines);
-    header_paragraph.render(area, buffer);
+    Paragraph::new(header_lines).render(area, buffer);
+}
+
+fn render_time_line(summary: &ActivitySummary, mode: ActivitySummaryMode) -> Line<'static> {
+    let timestamp_style = Style::default()
+        .fg(Color::White)
+        .add_modifier(Modifier::BOLD);
+
+    match mode {
+        ActivitySummaryMode::SinceLastViewed => {
+            let elapsed_minutes = summary.elapsed_seconds / 60;
+            let elapsed_seconds = summary.elapsed_seconds % 60;
+            let time_display = if elapsed_minutes > 0 {
+                format!("{elapsed_minutes}m {elapsed_seconds}s ago")
+            } else {
+                format!("{elapsed_seconds}s ago")
+            };
+
+            Line::from(vec![
+                Span::styled("Since: ", Style::default().fg(Color::Gray)),
+                Span::styled(
+                    summary.since.format("%H:%M:%S").to_string(),
+                    timestamp_style,
+                ),
+                Span::styled(
+                    format!(" ({time_display})"),
+                    Style::default().fg(Color::DarkGray),
+                ),
+            ])
+        }
+        ActivitySummaryMode::FullHistory => Line::from(vec![
+            Span::styled("Range: ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                summary.since.format("%H:%M:%S").to_string(),
+                timestamp_style,
+            ),
+            Span::styled(" → ", Style::default().fg(Color::DarkGray)),
+            Span::styled(Utc::now().format("%H:%M:%S").to_string(), timestamp_style),
+        ]),
+    }
 }
 
 fn render_events(summary: &ActivitySummary, area: Rect, buffer: &mut Buffer, scroll_offset: usize) {
@@ -121,7 +153,10 @@ fn render_events(summary: &ActivitySummary, area: Rect, buffer: &mut Buffer, scr
     add_notifications_section(&mut items, summary);
 
     if items.is_empty() {
-        render_empty_activity(area, buffer);
+        Paragraph::new("No activity recorded")
+            .style(Style::default().fg(Color::DarkGray))
+            .wrap(Wrap { trim: false })
+            .render(area, buffer);
         return;
     }
 
@@ -242,27 +277,21 @@ fn create_list_item(text: &str, color: Color) -> ListItem<'_> {
     ]))
 }
 
-fn render_empty_activity(area: Rect, buffer: &mut Buffer) {
-    let empty_message = Paragraph::new("No activity recorded")
-        .style(Style::default().fg(Color::DarkGray))
-        .wrap(Wrap { trim: false });
-    empty_message.render(area, buffer);
-}
-
 fn render_activity_list(
     items: Vec<ListItem>,
     area: Rect,
     buffer: &mut Buffer,
     scroll_offset: usize,
 ) {
+    let maximum_scroll_offset = items.len().saturating_sub(area.height as usize);
+    let visible_scroll_offset = scroll_offset.min(maximum_scroll_offset);
     let visible_items: Vec<ListItem> = items
         .into_iter()
-        .skip(scroll_offset)
+        .skip(visible_scroll_offset)
         .take(area.height as usize)
         .collect();
 
-    let list = List::new(visible_items);
-    list.render(area, buffer);
+    List::new(visible_items).render(area, buffer);
 }
 
 fn centered_rect(width: u16, height: u16, area: Rect) -> Rect {

@@ -1,6 +1,8 @@
 use super::{details_panel, done_tasks, task_list, terminal_panel};
+use crate::activity::types::ActivityEvent;
 use crate::app::App;
 use crate::views::StatusBarContent;
+use crate::views::instances::state::{ACTIVITY_RETENTION_DAYS, MAX_ACTIVITY_EVENTS};
 use crate::views::tasks::dialogs;
 use crate::views::tasks::operations::{TaskReference, get_active_tasks, get_done_tasks};
 use crate::views::tasks::state::{FocusPanel, TasksMode, TasksViewMode};
@@ -48,9 +50,21 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
         .split(horizontal_chunks[1]);
 
     let selected_task = get_selected_task(app);
-    details_panel::render(frame, selected_task.as_ref(), right_chunks[0]);
+    let instance_id = selected_task
+        .as_ref()
+        .and_then(|task_reference| task_reference.task.instance_id);
 
-    let instance_id = selected_task.and_then(|task_ref| task_ref.task.instance_id);
+    {
+        let activity_events = collect_activity_events(app, instance_id);
+        let activity_event_references: Vec<&ActivityEvent> = activity_events.iter().collect();
+        details_panel::render(
+            frame,
+            selected_task.as_ref(),
+            &activity_event_references,
+            right_chunks[0],
+        );
+    }
+
     let instance_pane = instance_id.and_then(|id| app.instances.find_pane_mut(id));
 
     let is_terminal_focused = matches!(
@@ -67,6 +81,34 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     );
 
     render_dialogs(frame, app, &app.tasks.mode, area);
+}
+
+fn collect_activity_events(app: &App, instance_id: Option<uuid::Uuid>) -> Vec<ActivityEvent> {
+    let Some(id) = instance_id else {
+        return Vec::new();
+    };
+
+    if let Some(pane) = app.instances.find_pane(id) {
+        return retained_activity_events(pane.activity_events.iter().cloned().collect());
+    }
+
+    if let Some(events) = app.cached_historical_events.get(&id) {
+        return retained_activity_events(events.clone());
+    }
+
+    Vec::new()
+}
+
+fn retained_activity_events(events: Vec<ActivityEvent>) -> Vec<ActivityEvent> {
+    let cutoff_time = chrono::Utc::now() - chrono::Duration::days(ACTIVITY_RETENTION_DAYS);
+    let mut retained_events: Vec<ActivityEvent> = events
+        .into_iter()
+        .filter(|event| event.timestamp > cutoff_time)
+        .collect();
+
+    retained_events.sort_by_key(|event| event.timestamp);
+    let events_to_skip = retained_events.len().saturating_sub(MAX_ACTIVITY_EVENTS);
+    retained_events.into_iter().skip(events_to_skip).collect()
 }
 
 fn get_selected_task(app: &App) -> Option<TaskReference<'_>> {

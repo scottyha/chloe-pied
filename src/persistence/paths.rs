@@ -24,6 +24,11 @@ pub fn get_state_path() -> PathBuf {
 }
 
 #[must_use]
+pub fn get_activity_log_path() -> PathBuf {
+    get_config_dir().join("activity.jsonl")
+}
+
+#[must_use]
 pub fn get_settings_path() -> PathBuf {
     get_config_dir().join("settings.json")
 }

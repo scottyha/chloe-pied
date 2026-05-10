@@ -1,4 +1,6 @@
+use crate::activity::types::ActivityEvent;
 use crate::views::tasks::operations::TaskReference;
+use crate::widgets::activity_digest::format_activity_digest;
 use ratatui::{
     Frame,
     layout::Rect,
@@ -7,7 +9,12 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph, Wrap},
 };
 
-pub fn render(frame: &mut Frame, selected_task: Option<&TaskReference<'_>>, area: Rect) {
+pub fn render(
+    frame: &mut Frame,
+    selected_task: Option<&TaskReference<'_>>,
+    activity_events: &[&ActivityEvent],
+    area: Rect,
+) {
     let block = Block::default()
         .title("Details")
         .title_style(
@@ -21,15 +28,20 @@ pub fn render(frame: &mut Frame, selected_task: Option<&TaskReference<'_>>, area
     let inner_area = block.inner(area);
     frame.render_widget(block, area);
 
-    if let Some(task_ref) = selected_task {
-        render_task_details(frame, task_ref, inner_area);
+    if let Some(task_reference) = selected_task {
+        render_task_details(frame, task_reference, activity_events, inner_area);
     } else {
         render_no_selection(frame, inner_area);
     }
 }
 
-fn render_task_details(frame: &mut Frame, task_ref: &TaskReference<'_>, area: Rect) {
-    let task = task_ref.task;
+fn render_task_details(
+    frame: &mut Frame,
+    task_reference: &TaskReference<'_>,
+    activity_events: &[&ActivityEvent],
+    area: Rect,
+) {
+    let task = task_reference.task;
 
     let mut lines = vec![
         Line::from(vec![Span::styled(
@@ -49,7 +61,7 @@ fn render_task_details(frame: &mut Frame, task_ref: &TaskReference<'_>, area: Re
             ),
             Span::raw("  "),
             Span::styled("Stage: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(task_ref.column_name, Style::default().fg(Color::Cyan)),
+            Span::styled(task_reference.column_name, Style::default().fg(Color::Cyan)),
         ]),
         Line::from(""),
     ];
@@ -97,6 +109,9 @@ fn render_task_details(frame: &mut Frame, task_ref: &TaskReference<'_>, area: Re
             Style::default().fg(Color::Green),
         )]));
     }
+
+    lines.push(Line::from(""));
+    lines.extend(format_activity_digest(activity_events, None));
 
     let paragraph = Paragraph::new(lines)
         .wrap(Wrap { trim: false })
