@@ -2,7 +2,9 @@ use crate::events::AppEvent;
 use crate::providers;
 use crate::types::{ProviderConfig, ReviewMode};
 use crate::views::instances::InstanceState;
-use crate::views::instances::operations::{TaskPaneConfig, build_notification_command};
+use crate::views::instances::operations::{
+    TaskPaneConfig, build_notification_command, build_rpc_prompt_command,
+};
 use crate::views::pull_requests::PullRequestsState;
 use crate::views::roadmap::RoadmapState;
 use crate::views::settings::{SettingsState, VcsCommand};
@@ -416,6 +418,10 @@ impl App {
             return;
         };
 
+        if pane.rpc_mode {
+            return;
+        }
+
         match event.event_type() {
             crate::events::EventType::Start => {
                 pane.agent_state = crate::views::instances::AgentState::Running;
@@ -433,7 +439,7 @@ impl App {
         }
     }
 
-    fn find_task_id_by_instance(&self, instance_id: uuid::Uuid) -> Option<uuid::Uuid> {
+    pub(crate) fn find_task_id_by_instance(&self, instance_id: uuid::Uuid) -> Option<uuid::Uuid> {
         self.tasks
             .columns
             .iter()
@@ -504,27 +510,41 @@ impl App {
             return false;
         };
 
-        let is_live_session = self
+        let Some((is_live_session, rpc_mode)) = self
             .instances
             .find_pane(instance_id)
-            .is_some_and(|pane| pane.pty_session.is_some());
+            .map(|pane| (pane.pty_session.is_some(), pane.rpc_mode))
+        else {
+            return false;
+        };
 
         if !is_live_session {
             return false;
         }
 
-        let review_provider_config = self.review_provider_config(provider);
         let review_prompt =
             build_review_prompt(&title, &description, &self.settings.settings.vcs_command);
-        let command = providers::get_spec(provider)
-            .build_command_with_config(&review_prompt, Some(&review_provider_config));
-        let shell_command = build_notification_command(&command, task_id);
 
-        if !self
-            .instances
-            .send_input_to_instance(instance_id, &shell_command)
-        {
-            return false;
+        if rpc_mode {
+            let rpc_command = build_rpc_prompt_command(&review_prompt);
+            if !self
+                .instances
+                .send_raw_input_to_instance(instance_id, rpc_command.as_bytes())
+            {
+                return false;
+            }
+        } else {
+            let review_provider_config = self.review_provider_config(provider);
+            let command = providers::get_spec(provider)
+                .build_command_with_config(&review_prompt, Some(&review_provider_config));
+            let shell_command = build_notification_command(&command, task_id);
+
+            if !self
+                .instances
+                .send_input_to_instance(instance_id, &shell_command)
+            {
+                return false;
+            }
         }
 
         self.tasks
@@ -556,6 +576,7 @@ impl App {
             environment: base_provider_config.environment,
             working_directory_argument: base_provider_config.working_directory_argument,
             supports_worktree: base_provider_config.supports_worktree,
+            rpc_mode: base_provider_config.rpc_mode,
         }
     }
 

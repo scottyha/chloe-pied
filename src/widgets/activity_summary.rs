@@ -116,6 +116,7 @@ fn render_events(summary: &ActivitySummary, area: Rect, buffer: &mut Buffer, scr
     add_commands_section(&mut items, summary);
     add_files_section(&mut items, summary);
     add_tasks_section(&mut items, summary);
+    add_tools_section(&mut items, summary);
     add_errors_section(&mut items, summary);
     add_notifications_section(&mut items, summary);
 
@@ -171,6 +172,23 @@ fn add_tasks_section<'a>(items: &mut Vec<ListItem<'a>>, summary: &'a ActivitySum
         summary.tasks_completed,
         Color::Magenta,
     ));
+    items.push(ListItem::new(Line::from("")));
+}
+
+fn add_tools_section<'a>(items: &mut Vec<ListItem<'a>>, summary: &'a ActivitySummary) {
+    if summary.tools_used.is_empty() {
+        return;
+    }
+
+    items.push(create_section_header(
+        "Tools Used",
+        summary.tools_used.len(),
+        Color::Cyan,
+    ));
+
+    for tool in &summary.tools_used {
+        items.push(create_list_item(tool, Color::White));
+    }
     items.push(ListItem::new(Line::from("")));
 }
 

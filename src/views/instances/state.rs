@@ -222,6 +222,8 @@ pub struct InstancePane {
     pub pty_spawn_error: Option<String>,
     #[serde(default)]
     pub agent_state: AgentState,
+    #[serde(default)]
+    pub rpc_mode: bool,
     #[serde(skip, default)]
     pub scroll_offset: usize,
     pub last_viewed_at: Option<DateTime<Utc>>,
@@ -252,6 +254,7 @@ impl InstancePane {
             pty_session: None,
             pty_spawn_error: None,
             agent_state: AgentState::Idle,
+            rpc_mode: false,
             scroll_offset: 0,
             last_viewed_at: Some(Utc::now()),
             activity_events: VecDeque::new(),
@@ -337,6 +340,7 @@ impl InstancePane {
         let mut files_changed = Vec::new();
         let mut errors = Vec::new();
         let mut notifications = Vec::new();
+        let mut tools_used = Vec::new();
         let mut tasks_completed = 0;
 
         for event in &events {
@@ -356,6 +360,9 @@ impl InstancePane {
                 ActivityEventType::TaskCompleted => {
                     tasks_completed += 1;
                 }
+                ActivityEventType::ToolUsed => {
+                    tools_used.push(event.description.clone());
+                }
             }
         }
 
@@ -368,6 +375,7 @@ impl InstancePane {
             files_changed,
             errors,
             notifications,
+            tools_used,
             tasks_completed,
         })
     }
@@ -388,6 +396,7 @@ pub enum ActivityEventType {
     TaskCompleted,
     ErrorOccurred,
     ProviderNotification,
+    ToolUsed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -407,6 +416,7 @@ pub struct ActivitySummary {
     pub files_changed: Vec<String>,
     pub errors: Vec<String>,
     pub notifications: Vec<String>,
+    pub tools_used: Vec<String>,
     pub tasks_completed: usize,
 }
 
@@ -449,6 +459,14 @@ impl ActivitySummary {
             let _ = write!(output, "Tasks completed: {}\n\n", self.tasks_completed);
         }
 
+        if !self.tools_used.is_empty() {
+            let _ = writeln!(output, "Tools used ({}):", self.tools_used.len());
+            for tool in &self.tools_used {
+                let _ = writeln!(output, "  • {tool}");
+            }
+            output.push('\n');
+        }
+
         if !self.errors.is_empty() {
             let _ = writeln!(output, "Errors ({}):", self.errors.len());
             for error in &self.errors {
@@ -482,6 +500,10 @@ impl ActivitySummary {
 
         if self.tasks_completed > 0 {
             parts.push(format!("{} tasks done", self.tasks_completed));
+        }
+
+        if !self.tools_used.is_empty() {
+            parts.push(format!("{} tools", self.tools_used.len()));
         }
 
         if !self.errors.is_empty() {
