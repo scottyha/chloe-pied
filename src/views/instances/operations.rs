@@ -116,27 +116,61 @@ impl InstanceState {
             config.omit_no_commit_instruction,
             config.task_prompt_template.as_deref(),
         );
-        let command = spec.build_command_with_config(&prompt, config.provider_config.as_ref());
+        let rpc_mode = config
+            .provider_config
+            .as_ref()
+            .is_some_and(|provider_config| provider_config.rpc_mode);
+        pane.rpc_mode = rpc_mode;
 
         if let Some(event_sender) = self.event_sender() {
-            let shell_command = build_shell_wrapped_command(&command, config.task_id);
-            let spawn_options = pty::SpawnOptions::new(
-                pane_id,
-                working_directory,
-                config.rows,
-                config.columns,
-                event_sender,
-            )
-            .with_command(shell_command.0, shell_command.1)
-            .with_environment(command.environment);
+            if rpc_mode {
+                let base_command =
+                    spec.build_command_with_config("", config.provider_config.as_ref());
+                let rpc_command = build_rpc_command(&base_command);
+                let spawn_options = pty::SpawnOptions::new(
+                    pane_id,
+                    working_directory,
+                    config.rows,
+                    config.columns,
+                    event_sender,
+                )
+                .with_command(rpc_command.program, rpc_command.arguments)
+                .with_environment(rpc_command.environment)
+                .with_rpc_mode(true);
 
-            match pty::PtySession::spawn_with_options(spawn_options) {
-                Ok(session) => {
-                    pane.agent_state = super::AgentState::Running;
-                    pane.pty_session = Some(session);
+                match pty::PtySession::spawn_with_options(spawn_options) {
+                    Ok(session) => {
+                        let prompt_command = build_rpc_prompt_command(&prompt);
+                        let _ = session.write_input(prompt_command.as_bytes());
+                        pane.agent_state = super::AgentState::Running;
+                        pane.pty_session = Some(session);
+                    }
+                    Err(error) => {
+                        pane.pty_spawn_error = Some(error.to_string());
+                    }
                 }
-                Err(error) => {
-                    pane.pty_spawn_error = Some(error.to_string());
+            } else {
+                let command =
+                    spec.build_command_with_config(&prompt, config.provider_config.as_ref());
+                let shell_command = build_shell_wrapped_command(&command, config.task_id);
+                let spawn_options = pty::SpawnOptions::new(
+                    pane_id,
+                    working_directory,
+                    config.rows,
+                    config.columns,
+                    event_sender,
+                )
+                .with_command(shell_command.0, shell_command.1)
+                .with_environment(command.environment);
+
+                match pty::PtySession::spawn_with_options(spawn_options) {
+                    Ok(session) => {
+                        pane.agent_state = super::AgentState::Running;
+                        pane.pty_session = Some(session);
+                    }
+                    Err(error) => {
+                        pane.pty_spawn_error = Some(error.to_string());
+                    }
                 }
             }
         } else {
@@ -336,6 +370,29 @@ fn build_task_prompt(
     let vcs_command_name = vcs_command.command_name();
     format!(
         "{base_prompt}\n\nIMPORTANT: Do not commit these changes with '{vcs_command_name} commit' until I explicitly ask you to."
+    )
+}
+
+fn build_rpc_command(command: &ProviderCommand) -> ProviderCommand {
+    let mut arguments = command.arguments.clone();
+    arguments.push("--mode".to_string());
+    arguments.push("rpc".to_string());
+
+    ProviderCommand {
+        program: command.program.clone(),
+        arguments,
+        environment: command.environment.clone(),
+    }
+}
+
+pub(crate) fn build_rpc_prompt_command(prompt: &str) -> String {
+    let prompt_json = serde_json::json!({
+        "type": "prompt",
+        "message": prompt,
+    });
+    format!(
+        "{}\n",
+        serde_json::to_string(&prompt_json).unwrap_or_default()
     )
 }
 
@@ -568,4 +625,43 @@ fn find_nearest_pane_in_direction(
     }
 
     best_candidate.map(|(id, _)| id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn rpc_command_appends_mode_arguments_after_provider_arguments() {
+        let command = ProviderCommand {
+            program: "pi".to_string(),
+            arguments: vec!["--no-orchestrator".to_string()],
+            environment: HashMap::from([("TEST_ENV".to_string(), "enabled".to_string())]),
+        };
+
+        let rpc_command = build_rpc_command(&command);
+
+        assert_eq!(rpc_command.program, "pi");
+        assert_eq!(
+            rpc_command.arguments,
+            vec!["--no-orchestrator", "--mode", "rpc"]
+        );
+        assert_eq!(
+            rpc_command.environment.get("TEST_ENV"),
+            Some(&"enabled".to_string())
+        );
+    }
+
+    #[test]
+    fn rpc_prompt_command_serializes_prompt_as_json_line() {
+        let prompt = "Quote: \"hello\"\nPath: C:\\tmp";
+
+        let command = build_rpc_prompt_command(prompt);
+        let value: serde_json::Value = serde_json::from_str(command.trim_end()).unwrap();
+
+        assert_eq!(value["type"], "prompt");
+        assert_eq!(value["message"], prompt);
+        assert!(command.ends_with('\n'));
+    }
 }

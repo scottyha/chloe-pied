@@ -1,4 +1,5 @@
 use crate::events::AppEvent;
+use crate::views::instances::rpc::{RpcEvent, parse_rpc_line};
 use alacritty_terminal::event::{Event, EventListener, OnResize, WindowSize};
 use alacritty_terminal::grid::Dimensions;
 use alacritty_terminal::term::{Config, Term};
@@ -55,6 +56,7 @@ pub struct SpawnOptions {
     pub arguments: Vec<String>,
     pub environment: std::collections::HashMap<String, String>,
     pub event_sender: mpsc::UnboundedSender<AppEvent>,
+    pub rpc_mode: bool,
 }
 
 impl SpawnOptions {
@@ -75,6 +77,7 @@ impl SpawnOptions {
             arguments: Vec::new(),
             environment: std::collections::HashMap::new(),
             event_sender,
+            rpc_mode: false,
         }
     }
 
@@ -92,6 +95,36 @@ impl SpawnOptions {
     ) -> Self {
         self.environment = environment;
         self
+    }
+
+    #[must_use]
+    pub const fn with_rpc_mode(mut self, rpc_mode: bool) -> Self {
+        self.rpc_mode = rpc_mode;
+        self
+    }
+}
+
+fn emit_complete_rpc_lines(
+    line_buffer: &mut Vec<u8>,
+    pane_id: Uuid,
+    event_sender: &mpsc::UnboundedSender<AppEvent>,
+) {
+    while let Some(newline_position) = line_buffer.iter().position(|&byte| byte == b'\n') {
+        let line_bytes: Vec<u8> = line_buffer.drain(..=newline_position).collect();
+        let Ok(line_text) = std::str::from_utf8(&line_bytes) else {
+            continue;
+        };
+
+        let Some((rpc_type, data)) = parse_rpc_line(line_text) else {
+            continue;
+        };
+
+        let event = RpcEvent {
+            pane_id,
+            rpc_type,
+            data,
+        };
+        let _ = event_sender.send(AppEvent::RpcEvent(event));
     }
 }
 
@@ -153,12 +186,14 @@ impl PtySession {
         let reader = pty.file().try_clone()?;
         let pane_id = options.pane_id;
         let event_sender = options.event_sender;
+        let rpc_mode = options.rpc_mode;
 
         let term_for_thread = Arc::clone(&term);
 
         thread::spawn(move || {
             let mut reader = reader;
             let mut buffer = [0u8; READ_BUFFER_BYTES];
+            let mut line_buffer = Vec::new();
             let mut processor: Processor<StdSyncHandler> = Processor::new();
 
             loop {
@@ -172,6 +207,11 @@ impl PtySession {
 
                         if let Ok(mut term) = term_for_thread.lock() {
                             processor.advance(&mut *term, &data);
+                        }
+
+                        if rpc_mode {
+                            line_buffer.extend_from_slice(&data);
+                            emit_complete_rpc_lines(&mut line_buffer, pane_id, &event_sender);
                         }
 
                         if event_sender
