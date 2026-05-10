@@ -1,4 +1,6 @@
-pub use crate::activity::types::{ActivityEvent, ActivityEventType, ActivitySummary};
+pub use crate::activity::types::{
+    ActivityEvent, ActivityEventType, ActivitySummary, ActivitySummaryMode,
+};
 use crate::events::AppEvent;
 use crate::types::AgentProvider;
 use alacritty_terminal::grid::Dimensions;
@@ -105,13 +107,15 @@ pub struct InstanceState {
     pub pane_areas: Vec<(Uuid, Rect)>,
     #[serde(skip, default)]
     pub activity_summary_scroll_offset: usize,
+    #[serde(skip, default)]
+    pub activity_summary_mode: ActivitySummaryMode,
     #[serde(skip)]
     event_sender: Option<mpsc::UnboundedSender<AppEvent>>,
 }
 
 impl InstanceState {
     #[must_use]
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             root: None,
             selected_pane_id: None,
@@ -119,6 +123,7 @@ impl InstanceState {
             last_render_area: None,
             pane_areas: Vec::new(),
             activity_summary_scroll_offset: 0,
+            activity_summary_mode: ActivitySummaryMode::default(),
             event_sender: None,
         }
     }
@@ -331,9 +336,17 @@ impl InstancePane {
 
     #[must_use]
     #[allow(dead_code)]
-    pub fn generate_activity_summary(&self) -> Option<ActivitySummary> {
-        let since = self.last_viewed_at?;
-        let events = self.get_events_since(since);
+    pub fn generate_activity_summary(&self, mode: ActivitySummaryMode) -> Option<ActivitySummary> {
+        let since = match mode {
+            ActivitySummaryMode::SinceLastViewed => self.last_viewed_at?,
+            ActivitySummaryMode::FullHistory => self.activity_events.front()?.timestamp,
+        };
+
+        let events: Vec<&ActivityEvent> = self
+            .activity_events
+            .iter()
+            .filter(|event| event.timestamp >= since)
+            .collect();
 
         ActivitySummary::from_events(since, &events)
     }

@@ -1,5 +1,5 @@
 use super::layout;
-use super::state::{InstancePane, InstanceState};
+use super::state::{ActivitySummaryMode, InstancePane, InstanceState};
 use crate::views::StatusBarContent;
 use crate::widgets::activity_summary::ActivitySummaryWidget;
 use crate::widgets::agent_indicator;
@@ -161,7 +161,10 @@ fn render_pane(
         ),
     ];
 
-    if pane.generate_activity_summary().is_some() {
+    if pane
+        .generate_activity_summary(ActivitySummaryMode::SinceLastViewed)
+        .is_some()
+    {
         title_spans.push(Span::styled(
             " 🔔",
             Style::default()
@@ -220,12 +223,12 @@ fn render_activity_summary(f: &mut Frame, state: &InstanceState, area: Rect) {
         return;
     };
 
-    let Some(summary) = pane.generate_activity_summary() else {
+    let Some(summary) = pane.generate_activity_summary(state.activity_summary_mode) else {
         return;
     };
 
-    let widget =
-        ActivitySummaryWidget::new(&summary).scroll_offset(state.activity_summary_scroll_offset);
+    let widget = ActivitySummaryWidget::new(&summary, state.activity_summary_mode)
+        .scroll_offset(state.activity_summary_scroll_offset);
 
     f.render_widget(widget, area);
 }
@@ -267,9 +270,9 @@ pub fn get_status_bar_content(state: &InstanceState, width: u16) -> StatusBarCon
         }
         super::InstanceMode::ActivitySummary => {
             if width < STATUS_BAR_WIDTH_THRESHOLD {
-                "j/k:scroll  Ctrl+d/u:page  g:top  q:close"
+                "j/k:scroll  Ctrl+d/u:page  g:top  f:mode  q:close"
             } else {
-                "j/k:scroll  Ctrl+d/u:half-page  g:top  q/Esc:close-summary"
+                "j/k:scroll  Ctrl+d/u:half-page  g:top  f:toggle-mode  q/Esc:close-summary"
             }
         }
     };

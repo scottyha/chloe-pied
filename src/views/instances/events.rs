@@ -1,6 +1,6 @@
 use super::TerminalAction;
 use super::operations::NavigationDirection;
-use super::state::{InstanceMode, InstanceState};
+use super::state::{ActivitySummaryMode, InstanceMode, InstanceState};
 use crate::events::{AppAction, EventHandler, EventResult};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
@@ -8,6 +8,7 @@ const DEFAULT_PTY_ROWS: u16 = 24;
 const DEFAULT_PTY_COLUMNS: u16 = 80;
 const SCROLL_LINES_SINGLE: usize = 1;
 const SCROLL_LINES_HALF_PAGE: usize = 12;
+const ACTIVITY_SUMMARY_BOTTOM_SCROLL_OFFSET: usize = usize::MAX;
 
 impl EventHandler for InstanceState {
     fn handle_key(&mut self, key: KeyEvent) -> EventResult {
@@ -195,6 +196,18 @@ impl InstanceState {
                 EventResult::Consumed
             }
             KeyCode::Char('g') => {
+                self.activity_summary_scroll_offset = 0;
+                EventResult::Consumed
+            }
+            KeyCode::Char('G') => {
+                self.activity_summary_scroll_offset = ACTIVITY_SUMMARY_BOTTOM_SCROLL_OFFSET;
+                EventResult::Consumed
+            }
+            KeyCode::Char('f') => {
+                self.activity_summary_mode = match self.activity_summary_mode {
+                    ActivitySummaryMode::SinceLastViewed => ActivitySummaryMode::FullHistory,
+                    ActivitySummaryMode::FullHistory => ActivitySummaryMode::SinceLastViewed,
+                };
                 self.activity_summary_scroll_offset = 0;
                 EventResult::Consumed
             }
