@@ -75,6 +75,8 @@ pub fn handle_add_task_command(arguments: AddTaskArgs) -> Result<(), String> {
         return Ok(());
     }
 
+    ensure_tui_not_running()?;
+
     let mut app = App::load_or_default();
     app.tasks.columns[0].tasks.push(task.clone());
     app.tasks.kanban_selected_column = 0;
@@ -83,6 +85,16 @@ pub fn handle_add_task_command(arguments: AddTaskArgs) -> Result<(), String> {
         .map_err(|error| format!("Failed to save task state: {error}"))?;
 
     print_task_preview("Created task in Planning", &task)
+}
+
+fn ensure_tui_not_running() -> Result<(), String> {
+    match std::os::unix::net::UnixStream::connect(crate::events::get_socket_path()) {
+        Ok(_) => Err(
+            "Cannot add task while the Chloe-pied TUI is running. Close the TUI first, then re-run add-task to avoid overwriting in-memory task state."
+                .to_string(),
+        ),
+        Err(_) => Ok(()),
+    }
 }
 
 fn parse_task_type(value: &str) -> Result<TaskType, String> {

@@ -311,7 +311,6 @@ def build_task_description(action: ActionItem, transcript_path: Path, message_id
     parts = [action.description.strip(), "", f"Evidence: {action.evidence}"]
     if message_id:
         parts.extend(["", f"Open Brain message: {message_id}"])
-    parts.extend(["", f"Source transcript: {transcript_path}"])
     return "\n".join(parts).strip()
 
 
