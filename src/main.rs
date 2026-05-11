@@ -48,6 +48,13 @@ async fn main() -> Result<(), io::Error> {
             }
             Ok(())
         }
+        Some(Commands::AddTask(arguments)) => {
+            if let Err(error) = cli::handle_add_task_command(arguments) {
+                eprintln!("Error: {error}");
+                std::process::exit(1);
+            }
+            Ok(())
+        }
         Some(Commands::Notify {
             event_type,
             worktree_id,
